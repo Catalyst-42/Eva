@@ -1,6 +1,13 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    kotlin("plugin.serialization") version "2.3.10"
+}
+
+kotlin {
+    compilerOptions {
+        freeCompilerArgs.add("-opt-in=kotlin.time.ExperimentalTime")
+    }
 }
 
 android {
@@ -56,4 +63,6 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.10.0")
+    implementation("org.jetbrains.androidx.navigation:navigation-compose:2.9.2")
 }

@@ -4,101 +4,71 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBox
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Home
+import androidx.compose.foundation.layout.paddingFrom
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.tooling.preview.PreviewScreenSizes
+import androidx.compose.ui.unit.dp
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import com.example.eva.di.AppContainer
+import com.example.eva.navigation.NavGraph
+import com.example.eva.navigation.Screen
 import com.example.eva.ui.theme.EvaTheme
 
 class MainActivity : ComponentActivity() {
+    private lateinit var appContainer: AppContainer
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        appContainer = AppContainer(this)
+
         enableEdgeToEdge()
         setContent {
             EvaTheme {
-                EvaApp()
+                EvaApp(appContainer = appContainer)
             }
         }
     }
 }
 
-@PreviewScreenSizes
 @Composable
-fun EvaApp() {
-    var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.HOME) }
+fun EvaApp(appContainer: AppContainer) {
+    val navController = rememberNavController()
+    val currentBackStack by navController.currentBackStackEntryAsState()
+    val currentRoute = currentBackStack?.destination?.route
 
     NavigationSuiteScaffold(
         navigationSuiteItems = {
-            AppDestinations.entries.forEach {
+            Screen.entries.forEach { screen ->
                 item(
-                    icon = {
-                        Icon(
-                            it.icon,
-                            contentDescription = it.label
-                        )
-                    },
-                    label = { Text(it.label) },
-                    selected = it == currentDestination,
-                    onClick = { currentDestination = it }
+                    icon = { Icon(screen.icon, contentDescription = screen.label) },
+                    label = { Text(screen.label) },
+                    selected = screen.route == currentRoute,
+                    onClick = {
+                        navController.navigate(screen.route) {
+                            popUpTo(navController.graph.startDestinationId) {
+                                saveState = true
+                            }
+
+                            // Don't make duplicates and restore last windows
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
                 )
             }
         }
     ) {
-        Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-            when (currentDestination) {
-                AppDestinations.HOME -> Greeting(
-                    name = "Home",
-                    modifier = Modifier.padding(innerPadding)
-                )
-                AppDestinations.FAVORITES -> Greeting(
-                    name = "Favorites",
-                    modifier = Modifier.padding(innerPadding)
-                )
-                AppDestinations.PROFILE -> Greeting(
-                    name = "Profile",
-                    modifier = Modifier.padding(innerPadding)
-                )
-            }
-        }
-    }
-}
-
-enum class AppDestinations(
-    val label: String,
-    val icon: ImageVector,
-) {
-    HOME("Home", Icons.Default.Home),
-    FAVORITES("Favorites", Icons.Default.Favorite),
-    PROFILE("Profile", Icons.Default.AccountBox),
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    EvaTheme {
-        Greeting("Android")
+        NavGraph(
+            modifier = Modifier.statusBarsPadding(),
+            navController = navController,
+            appContainer = appContainer
+        )
     }
 }
