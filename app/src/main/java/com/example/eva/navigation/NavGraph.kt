@@ -15,6 +15,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.eva.di.AppContainer
 import com.example.eva.presentation.screen.ActivityScreen
+import com.example.eva.presentation.screen.SettingsScreen
+import com.example.eva.presentation.screen.StatsScreen
 import com.example.eva.presentation.screen.TrackerScreen
 
 enum class Screen(
@@ -48,13 +50,11 @@ fun NavGraph(
         }
 
         composable(Screen.Stats.route) {
-            // TODO: Stats screen
-            Text("Stats")
+            StatsScreen(appContainer)
         }
 
         composable(Screen.Settings.route) {
-            // TODO: Settings screen
-            Text("Settings")
+            SettingsScreen(appContainer)
         }
     }
 }

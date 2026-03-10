@@ -7,6 +7,7 @@ import com.example.eva.domain.usecase.AddNoteToLastActivityUseCase
 import com.example.eva.domain.usecase.DeleteLastActivityUseCase
 import com.example.eva.domain.usecase.GetActivitiesUseCase
 import com.example.eva.domain.usecase.NewActivityUseCase
+import com.example.eva.domain.usecase.SaveActivitiesUseCase
 
 /**
  * DI class
@@ -22,4 +23,5 @@ class AppContainer(context: Context) {
     val newActivityUseCase: NewActivityUseCase = NewActivityUseCase(activitiesRepository)
     val deleteLastActivityUseCase: DeleteLastActivityUseCase = DeleteLastActivityUseCase(activitiesRepository)
     val addNoteToLastActivityUseCase: AddNoteToLastActivityUseCase = AddNoteToLastActivityUseCase(activitiesRepository)
+    val saveActivitiesUseCase: SaveActivitiesUseCase = SaveActivitiesUseCase(activitiesRepository)
 }

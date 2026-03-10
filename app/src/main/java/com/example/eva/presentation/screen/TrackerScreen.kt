@@ -47,7 +47,7 @@ fun TrackerScreen(
 fun TrackerScreenContent(viewModel: TrackerViewModel) {
     val state by viewModel.uiState.collectAsState()
     //  TODO: Make ability to change this list content
-    val activityTypes = listOf("Работа", "Учеба", "Отдых", "Спорт", "Еда", "Сон")
+    val activityTypes = listOf("Работа", "Учёба", "Отдых", "Спорт", "Еда", "Сон")
 
     var currentTime by remember { mutableStateOf(Clock.System.now()) }
     LaunchedEffect(Unit) {
@@ -115,6 +115,15 @@ fun TrackerScreenContent(viewModel: TrackerViewModel) {
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Добавить заметку")
+        }
+
+        Button(
+            onClick = {
+                viewModel.onSaveActivities()
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Сохранить файл")
         }
     }
 }

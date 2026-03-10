@@ -55,6 +55,12 @@ class TrackerViewModel(
         }
     }
 
+    fun onSaveActivities() {
+        viewModelScope.launch {
+            appContainer.saveActivitiesUseCase()
+        }
+    }
+
     @Suppress("UNCHECKED_CAST")
     class Factory(
         private val appContainer: AppContainer

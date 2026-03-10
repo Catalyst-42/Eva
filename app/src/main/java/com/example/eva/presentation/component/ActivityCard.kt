@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -88,22 +89,6 @@ fun ActivityCard(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Status
-            Icon(
-                imageVector = if (activity.end == null)
-                    Icons.Default.PlayArrow
-                else
-                    Icons.Default.Done,
-                contentDescription = if (activity.end == null) "Активно" else "Завершено",
-                tint = if (activity.end == null)
-                    MaterialTheme.colorScheme.primary
-                else
-                    MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.size(24.dp)
-            )
-
-            Spacer(modifier = Modifier.size(16.dp))
-
             // Basic info
             Column(
                 modifier = Modifier.weight(1f)
