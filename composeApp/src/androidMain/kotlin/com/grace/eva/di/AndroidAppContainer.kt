@@ -30,5 +30,5 @@ fun createAndroidAppContainer(context: Context): AndroidAppContainer =
     AndroidAppContainer(context)
 
 actual fun createAppContainer(): AppContainer {
-    error("On Android, use createAndroidAppContainer with Context")
+    error("On Android, use createAndroidAppContainer with Context instead")
 }

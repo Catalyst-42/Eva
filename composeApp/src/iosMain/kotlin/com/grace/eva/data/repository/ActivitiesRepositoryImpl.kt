@@ -32,19 +32,14 @@ class ActivitiesRepositoryImpl(): ActivitiesRepository {
         if (jsonString != null) {
             try {
                 activities.value = json.decodeFromString<Activities>(jsonString)
-                println("iOS: Loaded from UserDefaults")
             } catch (e: Exception) {
-                println("iOS: Error loading: ${e.message}")
             }
-        } else {
-            println("iOS: No saved data found")
         }
     }
 
     override fun saveActivities() {
         val jsonString = json.encodeToString(activities.value)
         userDefaults.setObject(jsonString, saveKey)
-        println("iOS: Saved to UserDefaults")
     }
 
     override fun getActivities(): Flow<Activities> {
@@ -76,9 +71,9 @@ class ActivitiesRepositoryImpl(): ActivitiesRepository {
             val currentList = activities.value.activities.toMutableList()
             currentList.removeLast()
 
-            // Если остались активности, обновляем время последней
+            // Make previous activity active now
             if (currentList.isNotEmpty()) {
-                currentList.last().end = Clock.System.now()
+                currentList.last().end = null
             }
 
             activities.value = Activities(
@@ -87,7 +82,6 @@ class ActivitiesRepositoryImpl(): ActivitiesRepository {
             )
 
             saveActivities()
-            println("iOS: Last activity deleted")
         }
     }
 }

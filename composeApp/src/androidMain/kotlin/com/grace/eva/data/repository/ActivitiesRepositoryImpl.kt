@@ -82,19 +82,21 @@ class ActivitiesRepositoryImpl(
     }
 
     override fun deleteLastActivity() {
-        // TODO: If activities is more than one:
-        //       make previous activity endTime = this activity endTime
-        //       and remove last activity (so the previous one takes all it's time)
-        //       _
-        //       before: | act. 1 | act 2. |
-        //       after:  |       act 1     |
-        //       _
-        //       If there's only one activity: just clear list
-
         if (activities.value.activities.isNotEmpty()) {
-            activities.value.activities.dropLast(1)
-        }
+            val currentList = activities.value.activities.toMutableList()
+            currentList.removeAt(currentList.lastIndex)
 
-        saveActivities()
+            // Make previous activity active now
+            if (currentList.isNotEmpty()) {
+                currentList.last().end = null
+            }
+
+            activities.value = Activities(
+                begin = Clock.System.now(),
+                activities = currentList
+            )
+
+            saveActivities()
+        }
     }
 }
