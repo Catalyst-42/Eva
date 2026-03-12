@@ -1,5 +1,7 @@
 package com.grace.eva.navigation
 
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Menu
@@ -38,7 +40,11 @@ fun NavGraph(
     NavHost(
         navController = navController,
         startDestination = Screen.Tracker.route,
-        modifier = modifier
+        modifier = modifier,
+        enterTransition = { slideInHorizontally { it } },
+        exitTransition = { slideOutHorizontally { -it } },
+        popEnterTransition = { slideInHorizontally { -it } },
+        popExitTransition = { slideOutHorizontally { it } }
     ) {
         composable(Screen.Tracker.route) {
             TrackerScreen(appContainer)

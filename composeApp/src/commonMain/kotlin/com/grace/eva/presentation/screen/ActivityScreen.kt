@@ -7,19 +7,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.grace.eva.di.AppContainer
 import com.grace.eva.presentation.component.ActivityCard
 import com.grace.eva.presentation.viewmodel.TrackerViewModel
-import kotlinx.coroutines.delay
-import kotlin.time.Clock
 
 @Composable
 fun ActivityScreen(
@@ -37,15 +31,6 @@ fun ActivityScreenContent(viewModel: TrackerViewModel) {
     val state by viewModel.uiState.collectAsState()
     val activities = state.activities.activities
 
-    var currentTime by remember { mutableStateOf(Clock.System.now()) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            // Recompose timer
-            currentTime = Clock.System.now()
-            delay(1000)
-        }
-    }
-
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -54,11 +39,12 @@ fun ActivityScreenContent(viewModel: TrackerViewModel) {
     ) {
         items(
             items = activities.reversed(),
-            key = { activity -> "${activity.begin}-${activity.name}" }
+            key = { activity -> "${activity.id}-${activity.end}" }
         ) { activity ->
             ActivityCard(
                 activity = activity,
-                now = currentTime
+                onActivityChange = { updatedActivity -> viewModel.onUpdateActivity(updatedActivity)},
+                onActivityDelete = { thisActivity -> viewModel.onDeleteActivity(thisActivity) }
             )
         }
     }

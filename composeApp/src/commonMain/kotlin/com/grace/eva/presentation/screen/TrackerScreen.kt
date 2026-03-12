@@ -11,20 +11,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.grace.eva.di.AppContainer
 import com.grace.eva.presentation.component.ActivityCard
 import com.grace.eva.presentation.viewmodel.TrackerViewModel
-import kotlinx.coroutines.delay
-import kotlin.time.Clock
 
 @Composable
 fun TrackerScreen(
@@ -43,15 +37,6 @@ fun TrackerScreenContent(viewModel: TrackerViewModel) {
     //  TODO: Make ability to change this list content
     val activityTypes = listOf("Сон", "Отдых", "Пары", "Транспорт", "Домашка", "Другое")
 
-    var currentTime by remember { mutableStateOf(Clock.System.now()) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            // Recompose timer
-            currentTime = Clock.System.now()
-            delay(1000)
-        }
-    }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -59,7 +44,8 @@ fun TrackerScreenContent(viewModel: TrackerViewModel) {
     ) {
         ActivityCard(
             activity = state.activities.activities.lastOrNull(),
-            now = currentTime
+            onActivityChange = { updatedActivity -> viewModel.onUpdateActivity(updatedActivity) },
+            onActivityDelete = { thisActivity -> viewModel.onDeleteActivity(thisActivity) }
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -76,7 +62,6 @@ fun TrackerScreenContent(viewModel: TrackerViewModel) {
                 row.forEach { name ->
                     Button(
                         onClick = {
-                            currentTime = Clock.System.now()
                             viewModel.onNewActivity(name)
                         },
                         modifier = Modifier.weight(1f)
@@ -93,13 +78,6 @@ fun TrackerScreenContent(viewModel: TrackerViewModel) {
         Spacer(modifier = Modifier.height(16.dp))
 
         // Controls
-        Button(
-            onClick = { viewModel.onDeleteLastActivity() },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Удалить последнюю запись")
-        }
-
         Button(
             onClick = {
                 // TODO: Add a note via alert window

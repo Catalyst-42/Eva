@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.grace.eva.di.AppContainer
 import com.grace.eva.domain.model.Activities
+import com.grace.eva.domain.model.Activity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -39,9 +40,9 @@ class TrackerViewModel(
         }
     }
 
-    fun onDeleteLastActivity() {
+    fun onDeleteActivity(activity: Activity) {
         viewModelScope.launch {
-            appContainer.deleteLastActivityUseCase()
+            appContainer.deleteActivityUseCase(activity)
         }
     }
 
@@ -57,11 +58,16 @@ class TrackerViewModel(
         }
     }
 
+    fun onUpdateActivity(activity: Activity) {
+        viewModelScope.launch {
+            appContainer.updateActivityUseCase(activity)
+        }
+    }
+
     @Suppress("UNCHECKED_CAST")
     class Factory(
         private val appContainer: AppContainer
     ) : ViewModelProvider.Factory {
-
         // This one is for KMM with KClass
         fun <T : ViewModel> create(modelClass: KClass<T>): T {
             return TrackerViewModel(appContainer) as T

@@ -1,7 +1,7 @@
 package com.grace.eva.presentation.component
 
+import androidx.compose.foundation.clickable
 import com.grace.eva.domain.model.Activity
-
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,11 +9,19 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -21,11 +29,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.grace.eva.utils.formatDuration
+import kotlinx.coroutines.delay
 import kotlin.time.Clock
-import kotlin.time.Duration.Companion.hours
-import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
-import kotlin.time.Instant
 
 @Composable
 fun ActivityEmptyCard() {
@@ -52,88 +58,157 @@ fun ActivityEmptyCard() {
     }
 }
 
-@Preview
-@Composable
-fun PreviewActivityEmptyCard() {
-    ActivityEmptyCard()
-}
-
 @Composable
 fun ActivityCard(
     activity: Activity?,
-    now: Instant
+    onActivityChange: (Activity) -> Unit,
+    onActivityDelete: (Activity) -> Unit
 ) {
     if (activity == null) {
         return ActivityEmptyCard()
     }
 
-    // Display activity
+    var expanded by remember { mutableStateOf(false) }
+    var editedName by remember (activity.name) { mutableStateOf(activity.name) }
+    var editedNote by remember(activity.note) { mutableStateOf(activity.note) }
+
+    var currentTime by remember { mutableStateOf(Clock.System.now()) }
+
+    LaunchedEffect(activity.end) {
+        if (activity.end == null) {
+            while (true) {
+                currentTime = Clock.System.now()
+                delay(1000L)
+            }
+        }
+    }
+
+    val duration = remember(activity.begin, activity.end, currentTime) {
+        val endTime = activity.end ?: currentTime
+        formatDuration(endTime - activity.begin)
+    }
+
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { expanded = !expanded },
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (activity.end == null)
                 MaterialTheme.colorScheme.primaryContainer
             else
-                MaterialTheme.colorScheme.surface
+                MaterialTheme.colorScheme.surfaceContainerLow
         )
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(16.dp)
         ) {
-            // Basic info
-            Column(
-                modifier = Modifier.weight(1f)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // Name and start time
-                Row(
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                Column(
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(
-                        text = activity.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = activity.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
 
-                    Text(
-                        text = activity.begin.toString(), // TODO: Make util to format time as dd.mm hh:mm:ss
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                        Text(
+                            text = activity.begin.toString(),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
 
-                // Duration
-                val endTime = activity.end ?: now
-                val duration = endTime - activity.begin
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = activity.note,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            overflow = TextOverflow.Ellipsis,
+                            maxLines = 1,
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(end = 4.dp)
+                        )
 
-                Row(
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = activity.note,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        overflow = TextOverflow.Ellipsis,
-                        maxLines = 1,
-                        modifier = Modifier.weight(1f).padding(end = 4.dp)
-                    )
-
-                    Text(
-                        text = formatDuration(duration),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color =
-                            if (activity.end == null)
+                        Text(
+                            text = duration,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (activity.end == null)
                                 MaterialTheme.colorScheme.primary
                             else
                                 MaterialTheme.colorScheme.onSurface
-                    )
+                        )
+                    }
+                }
+            }
+
+            if (expanded) {
+                Spacer(modifier = Modifier.height(16.dp))
+
+                OutlinedTextField(
+                    value = editedName,
+                    onValueChange = { editedName = it },
+                    label = { Text("Название") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = editedNote,
+                    onValueChange = { editedNote = it },
+                    label = { Text("Заметка") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            onActivityDelete(activity)
+                            expanded = false
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Удалить")
+                    }
+
+                    Button(
+                        onClick = {
+                            onActivityChange(
+                                activity.copy(
+                                    name = editedName,
+                                    note = editedNote
+                                )
+                            )
+                            expanded = false
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Сохранить")
+                    }
                 }
             }
         }
@@ -145,30 +220,15 @@ fun ActivityCard(
 fun PreviewActivityCard() {
     val name = "Сон"
     val begin = Clock.System.now() - 42.seconds
-
     val activity = Activity(name, "", begin)
-    ActivityCard(activity, Clock.System.now())
+    ActivityCard(activity, {}, {})
 }
 
 @Preview
 @Composable
-fun PreviewActivityInfoCard() {
-    val name = "Другое"
-    val note =  "Взбирался на Ковалькор, в отчие годы известный под именем Аграты"
-    val begin = Clock.System.now() - 16.seconds
-
-    val activity = Activity(name, note, begin)
-    ActivityCard(activity, Clock.System.now())
-}
-
-@Preview
-@Composable
-fun PreviewActivityDoneCard() {
-    val name = "Учёба"
-    val note =  "Взбирался на Ковалькор, в отчие годы известный под именем Аграты"
-    val begin = Clock.System.now() - 1.hours - 42.minutes - 16.seconds
-    val end = Clock.System.now()
-
-    val activity = Activity(name, note, begin, end)
-    ActivityCard(activity, Clock.System.now())
+fun PreviewActivityCardExpanded() {
+    val name = "И ещё что-то"
+    val begin = Clock.System.now() - 42.seconds
+    val activity = Activity(name, "Здоровый сон", begin)
+    ActivityCard(activity,  {}, {})
 }

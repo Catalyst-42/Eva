@@ -4,10 +4,11 @@ import android.content.Context
 import com.grace.eva.data.repository.ActivitiesRepositoryImpl
 import com.grace.eva.domain.repository.ActivitiesRepository
 import com.grace.eva.domain.usecase.AddNoteToLastActivityUseCase
-import com.grace.eva.domain.usecase.DeleteLastActivityUseCase
+import com.grace.eva.domain.usecase.DeleteActivityUseCase
 import com.grace.eva.domain.usecase.GetActivitiesUseCase
 import com.grace.eva.domain.usecase.NewActivityUseCase
 import com.grace.eva.domain.usecase.SaveActivitiesUseCase
+import com.grace.eva.domain.usecase.UpdateActivityUseCase
 
 /**
  * DI class
@@ -21,9 +22,10 @@ class AndroidAppContainer(context: Context): AppContainer {
     // Use cases
     override val getActivitiesUseCase: GetActivitiesUseCase = GetActivitiesUseCase(activitiesRepository)
     override val newActivityUseCase: NewActivityUseCase = NewActivityUseCase(activitiesRepository)
-    override val deleteLastActivityUseCase: DeleteLastActivityUseCase = DeleteLastActivityUseCase(activitiesRepository)
+    override val deleteActivityUseCase: DeleteActivityUseCase = DeleteActivityUseCase(activitiesRepository)
     override val addNoteToLastActivityUseCase: AddNoteToLastActivityUseCase = AddNoteToLastActivityUseCase(activitiesRepository)
     override val saveActivitiesUseCase: SaveActivitiesUseCase = SaveActivitiesUseCase(activitiesRepository)
+    override val updateActivityUseCase: UpdateActivityUseCase = UpdateActivityUseCase(activitiesRepository)
 }
 
 fun createAndroidAppContainer(context: Context): AndroidAppContainer =

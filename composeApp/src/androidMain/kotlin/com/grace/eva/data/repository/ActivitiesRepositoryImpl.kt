@@ -8,6 +8,7 @@ import com.grace.eva.domain.repository.ActivitiesRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.serialization.json.Json
 import java.io.File
 import kotlin.time.Clock
@@ -68,7 +69,13 @@ class ActivitiesRepositoryImpl(
 
         // Create new activity
         val newActivity = Activity(name, note)
-        activities.value.activities.add(newActivity)
+        val newList = activities.value.activities.toMutableList()
+        newList.add(newActivity)
+
+        activities.value = Activities(
+            begin = activities.value.begin,
+            activities = newList
+        )
 
         saveActivities()
     }
@@ -81,22 +88,30 @@ class ActivitiesRepositoryImpl(
         saveActivities()
     }
 
-    override fun deleteLastActivity() {
-        if (activities.value.activities.isNotEmpty()) {
-            val currentList = activities.value.activities.toMutableList()
-            currentList.removeAt(currentList.lastIndex)
+    override fun deleteActivity(activity: Activity) {
+        activities.update { currentActivities ->
+            val newList = currentActivities.activities
+                .filter { it.id != activity.id }
+                .toMutableList()
 
-            // Make previous activity active now
-            if (currentList.isNotEmpty()) {
-                currentList.last().end = null
-            }
+            // Ensure that last activity is not ended one
+            newList.lastOrNull()?.end = null
 
-            activities.value = Activities(
-                begin = Clock.System.now(),
-                activities = currentList
-            )
-
-            saveActivities()
+            currentActivities.copy(activities = newList)
         }
+
+        saveActivities()
+    }
+
+    override fun updateActivity(activity: Activity) {
+        activities.update { currentActivities ->
+            val newList = currentActivities.activities
+                .mapTo(mutableListOf()) { if (it.id == activity.id) activity else it }
+
+            currentActivities.copy(activities = newList)
+
+        }
+
+        saveActivities()
     }
 }

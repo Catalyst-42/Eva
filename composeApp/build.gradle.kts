@@ -45,10 +45,10 @@ kotlin {
             implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.10.0")
             api(libs.androidx.lifecycle.viewmodel)
             implementation("org.jetbrains.compose.material:material-icons-extended:1.7.3")
-//            implementation("androidx.compose.material3.adaptive:adaptive:1.3.0-alpha09")
-//            implementation("androidx.compose.material3.adaptive:adaptive-layout:1.3.0-alpha09")
-//            implementation("androidx.compose.material3.adaptive:adaptive-navigation:1.3.0-alpha09")
-//            implementation("org.jetbrains.androidx.compose.material3:material3-adaptive-navigation-suite:1.0.0-alpha07")
+           // implementation("androidx.compose.material3.adaptive:adaptive:1.3.0-alpha09")
+           // implementation("androidx.compose.material3.adaptive:adaptive-layout:1.3.0-alpha09")
+           // implementation("androidx.compose.material3.adaptive:adaptive-navigation:1.3.0-alpha09")
+           // implementation("org.jetbrains.androidx.compose.material3:material3-adaptive-navigation-suite:1.0.0-alpha07")
             implementation("org.jetbrains.compose.material3:material3-adaptive-navigation-suite:1.9.0")
         }
         commonTest.dependencies {
