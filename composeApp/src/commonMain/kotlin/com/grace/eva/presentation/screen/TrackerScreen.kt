@@ -82,7 +82,7 @@ fun TrackerScreenContent(viewModel: TrackerViewModel) {
             onClick = {
                 // TODO: Add a note via alert window
                 // TODO: Make it available to add note to any note by id?
-                // TODO: Add the id's to Activity objects???
+                // DONE: Add the id's to Activity objects???
                 viewModel.onAddNoteToLastActivityUseCase("Заметка")
             },
             modifier = Modifier.fillMaxWidth()

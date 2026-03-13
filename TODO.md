@@ -48,6 +48,13 @@ Impl, потом подключить использование этой фун
 
 - [ ] Алёна: Лёгкое: ActivityCard - Сделать отдельную Util функцию для форматирования времени
       Формат: "dd.mm.yyyy hh:mm:ss" - начало этапа. Учесть utc сдвиг чтобы время было в текущем регионе!
+      ```kotlin
+      val milliseconds = activities.firstOrNull()?.begin?.toEpochMilliseconds() ?: 0
+      val instantMs = Instant.fromEpochMilliseconds(milliseconds)
+      val date = instantMs.toLocalDateTime(TimeZone.currentSystemDefault()).date
+      ```
+      Смотри в ActivityScreen реализацию. Так же надо сделать так, наверное, чтобы можно было в util
+      передавать нужный формат, где то только дата, где-то с часами и так далее
 
 - [ ] Среднее: Settings - Перенести туда кнопку для сохранения файла, потому что сейчас ничего не сохраняется
   автоматически
