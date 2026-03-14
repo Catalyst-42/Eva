@@ -16,7 +16,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.grace.eva.di.AppContainer
@@ -75,7 +74,7 @@ fun ActivitiesTotal(activities: MutableList<Activity>) {
         )
 
         Text(
-            text = "С $date", // TODO: Replace on date util function
+            text = "С $date", // TODO: Count total time in hh:mm:ss if less than 24h else in days
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodyMedium
         )

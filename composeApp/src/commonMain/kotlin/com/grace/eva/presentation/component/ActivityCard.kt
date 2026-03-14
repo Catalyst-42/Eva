@@ -14,7 +14,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -31,7 +30,12 @@ import androidx.compose.ui.unit.dp
 import com.grace.eva.utils.formatDuration
 import kotlinx.coroutines.delay
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.material3.OutlinedTextField
+import kotlin.time.Instant
 
 @Composable
 fun ActivityEmptyCard() {
@@ -62,15 +66,17 @@ fun ActivityEmptyCard() {
 fun ActivityCard(
     activity: Activity?,
     onActivityChange: (Activity) -> Unit,
-    onActivityDelete: (Activity) -> Unit
+    onActivityDelete: (Activity) -> Unit,
+    expanded: Boolean = false
 ) {
     if (activity == null) {
         return ActivityEmptyCard()
     }
 
-    var expanded by remember { mutableStateOf(false) }
-    var editedName by remember (activity.name) { mutableStateOf(activity.name) }
+    var expanded by remember { mutableStateOf(expanded) }
+    var editedName by remember(activity.name) { mutableStateOf(activity.name) }
     var editedNote by remember(activity.note) { mutableStateOf(activity.note) }
+    var editedBegin by remember(activity.begin) { mutableStateOf(activity.begin) }
 
     var currentTime by remember { mutableStateOf(Clock.System.now()) }
 
@@ -125,7 +131,7 @@ fun ActivityCard(
                         Text(
                             text = activity.begin.toString(),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
 
@@ -149,68 +155,101 @@ fun ActivityCard(
                         Text(
                             text = duration,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = if (activity.end == null)
-                                MaterialTheme.colorScheme.primary
-                            else
-                                MaterialTheme.colorScheme.onSurface
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
             }
 
             if (expanded) {
-                Spacer(modifier = Modifier.height(16.dp))
-
-                OutlinedTextField(
-                    value = editedName,
-                    onValueChange = { editedName = it },
-                    label = { Text("Название") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                OutlinedTextField(
-                    value = editedNote,
-                    onValueChange = { editedNote = it },
-                    label = { Text("Заметка") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    OutlinedButton(
-                        onClick = {
-                            onActivityDelete(activity)
-                            expanded = false
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Удалить")
-                    }
-
-                    Button(
-                        onClick = {
-                            onActivityChange(
-                                activity.copy(
-                                    name = editedName,
-                                    note = editedNote
-                                )
+                ActivityCardControls(
+                    editedName = editedName,
+                    editedNote = editedNote,
+                    editedBegin = editedBegin,
+                    onNameChange = { editedName = it },
+                    onNoteChange = { editedNote = it },
+                    onSave = {
+                        onActivityChange(
+                            activity.copy(
+                                name = editedName,
+                                note = editedNote
                             )
-                            expanded = false
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Сохранить")
+                        )
+                        expanded = false
+                    },
+                    onDelete = {
+                        onActivityDelete(activity)
+                        expanded = false
                     }
-                }
+                )
             }
+        }
+    }
+}
+
+@Composable
+fun ActivityCardControls(
+    editedName: String,
+    editedNote: String,
+    editedBegin: Instant,
+    onNameChange: (String) -> Unit,
+    onNoteChange: (String) -> Unit,
+    onSave: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Spacer(modifier = Modifier.height(16.dp))
+
+    OutlinedTextField(
+        value = "$editedBegin",
+        onValueChange = onNoteChange,
+        label = { Text("Начало") },
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true,
+        enabled = false // TODO: Make editable
+    )
+
+    Spacer(modifier = Modifier.height(8.dp))
+
+    OutlinedTextField(
+        value = editedName,
+        onValueChange = onNameChange,
+        label = { Text("Название") },
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true
+    )
+
+    Spacer(modifier = Modifier.height(8.dp))
+
+    OutlinedTextField(
+        value = editedNote,
+        onValueChange = onNoteChange,
+        label = { Text("Заметка") },
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true
+    )
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        OutlinedButton(
+            onClick = onDelete,
+            modifier = Modifier.weight(1f),
+            border = BorderStroke(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.outline
+            )
+        ) {
+            Text("Удалить")
+        }
+
+        Button(
+            onClick = onSave,
+            modifier = Modifier.weight(1f)
+        ) {
+            Text("Сохранить")
         }
     }
 }
@@ -219,7 +258,7 @@ fun ActivityCard(
 @Composable
 fun PreviewActivityCard() {
     val name = "Сон"
-    val begin = Clock.System.now() - 42.seconds
+    val begin = Clock.System.now() - 666.seconds
     val activity = Activity(name, "", begin)
     ActivityCard(activity, {}, {})
 }
@@ -228,7 +267,19 @@ fun PreviewActivityCard() {
 @Composable
 fun PreviewActivityCardExpanded() {
     val name = "И ещё что-то"
+    val note = "Здоровый сон"
     val begin = Clock.System.now() - 42.seconds
-    val activity = Activity(name, "Здоровый сон", begin)
-    ActivityCard(activity,  {}, {})
+    val activity = Activity(name, note, begin)
+    ActivityCard(activity,  {}, {}, true)
+}
+
+@Preview
+@Composable
+fun PreviewListActivityCardExpanded() {
+    val name = "И ещё что-то"
+    val note = "Нездоровый сон"
+    val begin = Clock.System.now() - 3.hours - 42.minutes - 16.seconds
+    val end = Clock.System.now()
+    val activity = Activity(name, note, begin, end)
+    ActivityCard(activity,  {}, {}, true)
 }

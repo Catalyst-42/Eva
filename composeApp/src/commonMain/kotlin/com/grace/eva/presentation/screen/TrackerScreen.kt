@@ -77,26 +77,5 @@ fun TrackerScreenContent(viewModel: TrackerViewModel) {
         Text(text = "Управление:")
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Controls
-        Button(
-            onClick = {
-                // TODO: Add a note via alert window
-                // TODO: Make it available to add note to any note by id?
-                // DONE: Add the id's to Activity objects???
-                viewModel.onAddNoteToLastActivityUseCase("Заметка")
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Добавить заметку")
-        }
-
-        Button(
-            onClick = {
-                viewModel.onSaveActivities()
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Сохранить файл")
-        }
     }
 }

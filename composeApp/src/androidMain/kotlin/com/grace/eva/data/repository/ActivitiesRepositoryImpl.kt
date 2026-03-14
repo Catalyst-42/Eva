@@ -19,6 +19,7 @@ class ActivitiesRepositoryImpl(
     // Init empty save
     val activities = MutableStateFlow(
         Activities(
+            "Activities",
             Clock.System.now(),
             mutableListOf()
         )

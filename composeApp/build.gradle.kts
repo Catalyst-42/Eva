@@ -24,6 +24,7 @@ kotlin {
             export(libs.androidx.lifecycle.viewmodel)
             baseName = "ComposeApp"
             isStatic = true
+            binaryOption("bundleId", "com.grace.eva")
         }
     }
     
