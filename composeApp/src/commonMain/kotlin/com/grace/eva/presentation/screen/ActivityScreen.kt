@@ -12,8 +12,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -22,11 +26,15 @@ import com.grace.eva.di.AppContainer
 import com.grace.eva.domain.model.Activity
 import com.grace.eva.presentation.component.ActivityCard
 import com.grace.eva.presentation.viewmodel.TrackerViewModel
-import kotlinx.datetime.TimeZone
-import kotlin.time.Clock
+import com.grace.eva.utils.formatDuration
+import kotlinx.coroutines.delay
+import kotlin.time.Clock.System.now
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Instant
 import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Clock.System
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 @Composable
 fun ActivityScreen(
@@ -56,9 +64,16 @@ fun ActivityScreenContent(viewModel: TrackerViewModel) {
 
 @Composable
 fun ActivitiesTotal(activities: MutableList<Activity>) {
-    val milliseconds = activities.firstOrNull()?.begin?.toEpochMilliseconds() ?: 0
-    val instantMs = Instant.fromEpochMilliseconds(milliseconds)
-    val date = instantMs.toLocalDateTime(TimeZone.currentSystemDefault()).date
+    var duration by remember { mutableStateOf(Duration.ZERO) }
+
+    LaunchedEffect(activities.size) {
+        while (true) {
+            duration = now() - (
+                activities.firstOrNull()?.begin ?: now()
+            )
+            delay(1000)
+        }
+    }
 
     Row(
         modifier = Modifier
@@ -68,13 +83,13 @@ fun ActivitiesTotal(activities: MutableList<Activity>) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = "Всего активностей: ${activities.size}",
+            text = "Активностей: ${activities.size}",
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodyMedium
         )
 
         Text(
-            text = "С $date", // TODO: Count total time in hh:mm:ss if less than 24h else in days
+            text = "Всего ${formatDuration(duration)}",
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodyMedium
         )
@@ -109,11 +124,10 @@ fun ActivitiesList(
 @Preview
 @Composable
 fun PreviewActivitiesTotal() {
-    val now = Clock.System.now()
     val activities: MutableList<Activity> = mutableListOf(
-        Activity("Первое", "", now - 1.hours),
-        Activity("Второе", "", now - 2.hours, end = now - 1.hours),
-        Activity("Третье", "Начало начал", now - 4.hours, end = now - 3.hours),
+        Activity("Первое", "", now() - 1.hours),
+        Activity("Второе", "", now() - 2.hours, end = now() - 1.hours),
+        Activity("Третье", "Начало начал", now() - 4.hours, end = now() - 3.hours),
     )
 
     ActivitiesTotal(activities)
@@ -122,11 +136,10 @@ fun PreviewActivitiesTotal() {
 @Preview
 @Composable
 fun PreviewActivitiesList() {
-    val now = Clock.System.now()
     val activities: MutableList<Activity> = mutableListOf(
-        Activity("Первое", "", now - 1.hours),
-        Activity("Второе", "", now - 2.hours, end = now - 1.hours),
-        Activity("Третье", "Начало начал", now - 4.hours, end = now - 3.hours),
+        Activity("Первое", "", now() - 1.hours),
+        Activity("Второе", "", now() - 2.hours, end = now() - 1.hours),
+        Activity("Третье", "Начало начал", now() - 4.hours, end = now() - 3.hours),
     )
 
     ActivitiesList(activities, {}, {})

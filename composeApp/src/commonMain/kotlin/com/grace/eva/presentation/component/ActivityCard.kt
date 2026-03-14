@@ -35,6 +35,7 @@ import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.OutlinedTextField
+import com.grace.eva.utils.formatTime
 import kotlin.time.Instant
 
 @Composable
@@ -129,7 +130,7 @@ fun ActivityCard(
                         )
 
                         Text(
-                            text = activity.begin.toString(),
+                            text = formatTime(activity.begin, "dd.mm HH:MM:SS"),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -200,7 +201,7 @@ fun ActivityCardControls(
     Spacer(modifier = Modifier.height(16.dp))
 
     OutlinedTextField(
-        value = "$editedBegin",
+        value = formatTime(editedBegin),
         onValueChange = onNoteChange,
         label = { Text("Начало") },
         modifier = Modifier.fillMaxWidth(),
