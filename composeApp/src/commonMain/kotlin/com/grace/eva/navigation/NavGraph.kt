@@ -1,5 +1,7 @@
 package com.grace.eva.navigation
 
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.material.icons.Icons
@@ -21,43 +23,75 @@ import com.grace.eva.presentation.screen.StatsScreen
 import com.grace.eva.presentation.screen.TrackerScreen
 
 enum class Screen(
-    val route: String,
-    val icon: ImageVector,
-    val label: String
+    val route: String, val icon: ImageVector, val label: String, val order: Int
 ) {
-    Tracker("tracker", Icons.Default.PlayArrow, "Трекер"),
-    Activities("activities", Icons.Default.Menu, "Активности"),
-    Stats("stats", Icons.Default.Info, "Статистика"),
-    Settings("settings", Icons.Default.Settings, "Настройки")
+    Tracker("tracker", Icons.Default.PlayArrow, "Трекер", 0),
+    Activities("activities", Icons.Default.Menu, "Активности", 1),
+    Stats("stats", Icons.Default.Info, "Статистика", 2),
+    Settings("settings", Icons.Default.Settings, "Настройки", 3)
 }
 
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun NavGraph(
-    modifier: Modifier,
-    navController: NavHostController = rememberNavController(),
+    modifier: Modifier, navController: NavHostController = rememberNavController(),
     appContainer: AppContainer
 ) {
     NavHost(
         navController = navController,
         startDestination = Screen.Tracker.route,
         modifier = modifier,
-        enterTransition = { slideInHorizontally { it } },
-        exitTransition = { slideOutHorizontally { -it } },
-        popEnterTransition = { slideInHorizontally { -it } },
-        popExitTransition = { slideOutHorizontally { it } }
-    ) {
+        enterTransition = {
+            val initialState = initialState.destination.route
+            val targetState = targetState.destination.route
+
+            val initialOrder = Screen.entries.first { it.route == initialState }.order
+            val targetOrder = Screen.entries.first { it.route == targetState }.order
+
+            if (targetOrder > initialOrder) {
+                // Forward navigation
+                slideInHorizontally(
+                    initialOffsetX = { fullWidth -> fullWidth },
+                    animationSpec = tween(300)
+                )
+            } else {
+                // Back navigation
+                slideInHorizontally(
+                    initialOffsetX = { fullWidth -> -fullWidth },
+                    animationSpec = tween(300)
+                )
+            }
+        },
+        exitTransition = {
+            val initialState = initialState.destination.route
+            val targetState = targetState.destination.route
+
+            val initialOrder = Screen.entries.first { it.route == initialState }.order
+            val targetOrder = Screen.entries.first { it.route == targetState }.order
+
+            if (targetOrder > initialOrder) {
+                // Forward navigation
+                slideOutHorizontally(
+                    targetOffsetX = { fullWidth -> -fullWidth },
+                    animationSpec = tween(300)
+                )
+            } else {
+                // Back navigation
+                slideOutHorizontally(
+                    targetOffsetX = { fullWidth -> fullWidth },
+                    animationSpec = tween(300)
+                )
+            }
+        }) {
         composable(Screen.Tracker.route) {
             TrackerScreen(appContainer)
         }
-
         composable(Screen.Activities.route) {
             ActivitiesScreen(appContainer)
         }
-
         composable(Screen.Stats.route) {
             StatsScreen(appContainer)
         }
-
         composable(Screen.Settings.route) {
             SettingsScreen(appContainer)
         }
