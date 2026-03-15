@@ -15,9 +15,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.grace.eva.di.AppContainer
+import com.grace.eva.di.MockAppContainer
+import com.grace.eva.di.MockType
 import com.grace.eva.presentation.component.ActivitiesCard
 import com.grace.eva.presentation.viewmodel.TrackerViewModel
 
@@ -50,7 +53,7 @@ fun SettingsScreenContent(
             text = "Настройки сохранений",
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(bottom = 8.dp)
+            modifier = Modifier.padding(bottom = 16.dp)
         )
 
         ActivitiesCard(
@@ -74,4 +77,14 @@ fun SettingsScreenContent(
             Text("Импортировать файл сохранения")
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewSettingsScreen() {
+    SettingsScreenContent(
+        viewModel = viewModel(
+            factory = TrackerViewModel.Factory(MockAppContainer(MockType.LARGE))
+        )
+    )
 }

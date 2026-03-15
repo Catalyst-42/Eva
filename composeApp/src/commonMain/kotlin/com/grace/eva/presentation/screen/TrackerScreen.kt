@@ -56,7 +56,7 @@ fun TrackerScreenContent(viewModel: TrackerViewModel) {
             text = "Текущая активность",
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(bottom = 8.dp)
+            modifier = Modifier.padding(bottom = 16.dp)
         )
 
         ActivityCard(

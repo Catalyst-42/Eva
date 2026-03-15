@@ -281,7 +281,7 @@ fun StatsLegendCard(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = "Повторов: $count",
+                        text = "Этапов: $count",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
