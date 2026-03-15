@@ -74,7 +74,7 @@ class MockAppContainer(
     private val mockActivities = createMockActivities()
 
     // Generic use case that does nothing
-    private inner class MockUseCase<R : Any>(private val repo: ActivitiesRepository) {
+    private inner class MockUseCase(private val repo: ActivitiesRepository) {
         @Suppress("UNCHECKED_CAST")
         inline fun <reified T> asUseCase(): T = when (T::class) {
             GetActivitiesUseCase::class -> object : GetActivitiesUseCase(repo) {
@@ -109,7 +109,7 @@ class MockAppContainer(
         }
     }
 
-    private val mockUseCase = MockUseCase<Any>(mockRepo)
+    private val mockUseCase = MockUseCase(mockRepo)
 
     override val getActivitiesUseCase: GetActivitiesUseCase = mockUseCase.asUseCase()
     override val newActivityUseCase: NewActivityUseCase = mockUseCase.asUseCase()

@@ -47,7 +47,7 @@ fun SettingsScreenContent(
     ) {
         ActivitiesCard(
             activities = activities,
-            viewModel = viewModel, // Just pass the whole ViewModel
+            viewModel = viewModel,
             onNameChange = { newName ->
                 editedName = newName
                 // TODO: Implement name change
