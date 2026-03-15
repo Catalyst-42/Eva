@@ -140,7 +140,7 @@ fun ActivitiesCard(
                         onNameChange(it)
                     },
                     onEndChange = { /* TODO: Make available to set end time to now() */ },
-                    onActivitiesSave = { /* TODO: Plug it in */ }
+                    onActivitiesSave = { viewModel.onSaveActivities() }
                 )
             }
         }
