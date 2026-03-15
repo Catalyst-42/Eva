@@ -1,5 +1,6 @@
 package com.grace.eva.presentation.screen
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -56,13 +57,22 @@ fun ActivityScreenContent(viewModel: TrackerViewModel) {
             activities
         } else {
             activities.filter { activity ->
-                activity.name.contains(searchQuery, ignoreCase = true) || activity.note.contains(searchQuery, ignoreCase = true)
+                activity.name.contains(searchQuery, ignoreCase = true) ||
+                        activity.note.contains(searchQuery, ignoreCase = true)
             }
         }
-    }.reversed()
+    }.sortedByDescending { it.begin } // Sort by begin time descending (most recent first)
+
+    fun scrollToTop() {
+        scope.launch {
+            scrollState.animateScrollToItem(0)
+        }
+    }
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(top = 16.dp)
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(top = 16.dp)
     ) {
         Text(
             text = "Последние активности",
@@ -70,6 +80,7 @@ fun ActivityScreenContent(viewModel: TrackerViewModel) {
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.padding(horizontal = 16.dp)
         )
+
         // Floating search card styled like inactive card
         Card(
             modifier = Modifier
@@ -83,16 +94,9 @@ fun ActivityScreenContent(viewModel: TrackerViewModel) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                    .padding(vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = "Search",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 8.dp)
-                )
-
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
@@ -140,7 +144,10 @@ fun ActivityScreenContent(viewModel: TrackerViewModel) {
             Text(
                 text = "История",
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.clickable {
+                    scrollToTop()
+                }
             )
 
             if (searchQuery.isNotEmpty()) {
@@ -165,15 +172,27 @@ fun ActivityScreenContent(viewModel: TrackerViewModel) {
         ) {
             if (filteredActivities.isEmpty()) {
                 item {
-                    EmptyActivitiesCard(isSearchActive = searchQuery.isNotEmpty())
+                    EmptyActivitiesCard()
                 }
             } else {
                 items(
                     items = filteredActivities,
-                    key = { activity -> "${activity.id}-${activity.end}" }
+                    key = { activity -> "${activity.id}-${activity.begin}" }
                 ) { activity ->
+                    // Find the next activity (the one that started after this one)
+                    val currentIndex = filteredActivities.indexOf(activity)
+                    val nextActivityBegin = if (currentIndex > 0) {
+                        // Since we're sorted descending, the next activity in chronological order
+                        // is actually the previous item in the list
+                        filteredActivities[currentIndex - 1].begin
+                    } else {
+                        // This is the most recent activity (first in the list)
+                        null
+                    }
+
                     ActivityCard(
                         activity = activity,
+                        nextActivityBegin = nextActivityBegin,
                         onActivityChange = { activity -> viewModel.onUpdateActivity(activity) },
                         onActivityDelete = { activity -> viewModel.onDeleteActivity(activity) }
                     )
@@ -184,7 +203,7 @@ fun ActivityScreenContent(viewModel: TrackerViewModel) {
 }
 
 @Composable
-fun EmptyActivitiesCard(isSearchActive: Boolean) {
+fun EmptyActivitiesCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -194,7 +213,7 @@ fun EmptyActivitiesCard(isSearchActive: Boolean) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(24.dp),
+                .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
@@ -209,7 +228,7 @@ fun EmptyActivitiesCard(isSearchActive: Boolean) {
 @Preview(showBackground = true)
 @Composable
 fun PreviewEmptyActivitiesCard_NoActivities() {
-    EmptyActivitiesCard(false)
+    EmptyActivitiesCard()
 }
 
 @Preview(showBackground = true)

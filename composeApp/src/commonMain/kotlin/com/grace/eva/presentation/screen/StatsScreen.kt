@@ -54,14 +54,28 @@ fun StatsScreenContent(viewModel: TrackerViewModel) {
         }
     }
 
-    val activityStats = remember(activities, currentTime) {
-        activities
-            .groupBy { it.name }
+    // Sort activities by begin time for calculating durations
+    val sortedActivities = remember(activities) {
+        activities.sortedBy { it.begin }
+    }
+
+    val activityStats = remember(sortedActivities, currentTime) {
+        // Calculate durations using next activity's begin time
+        val activitiesWithDuration = sortedActivities.mapIndexed { index, activity ->
+            val endTime = if (index < sortedActivities.lastIndex) {
+                sortedActivities[index + 1].begin
+            } else {
+                currentTime
+            }
+            val duration = endTime - activity.begin
+            activity.name to duration
+        }
+
+        // Group by name and sum durations
+        activitiesWithDuration
+            .groupBy { it.first }
             .mapValues { entry ->
-                val totalSeconds = entry.value.sumOf { activity ->
-                    val end = activity.end ?: currentTime
-                    (end - activity.begin).inWholeSeconds
-                }.seconds
+                val totalSeconds = entry.value.sumOf { it.second.inWholeSeconds }.seconds
                 val count = entry.value.size
                 Pair(totalSeconds, count)
             }
@@ -166,7 +180,7 @@ fun StatsScreenContent(viewModel: TrackerViewModel) {
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // Total stats below the bar chart (replacing the separate card)
+                    // Total stats below the bar chart
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -298,11 +312,11 @@ fun StatsLegendCard(
 }
 
 private val chartColors = listOf(
-    Color(0xFF4CAF50), // Green
     Color(0xFF2196F3), // Blue
     Color(0xFFFF9800), // Orange
-    Color(0xFF9C27B0), // Purple
     Color(0xFFF44336), // Red
+    Color(0xFF9C27B0), // Purple
+    Color(0xFF4CAF50), // Green
     Color(0xFF00BCD4), // Cyan
     Color(0xFFFFC107), // Amber
     Color(0xFF3F51B5), // Indigo

@@ -44,8 +44,14 @@ fun TrackerScreen(
 @Composable
 fun TrackerScreenContent(viewModel: TrackerViewModel) {
     val state by viewModel.uiState.collectAsState()
+    val activities = state.activities.activities
+
     //  TODO: Make ability to change this list content
     val activityTypes = listOf("Сон", "Отдых", "Пары", "Транспорт", "Домашка", "Другое")
+
+    // Get the last activity (current activity) and the one before it for proper duration calculation
+    val currentActivity = activities.lastOrNull()
+    val previousActivity = if (activities.size >= 2) activities[activities.size - 2] else null
 
     Column(
         modifier = Modifier
@@ -60,9 +66,10 @@ fun TrackerScreenContent(viewModel: TrackerViewModel) {
         )
 
         ActivityCard(
-            activity = state.activities.activities.lastOrNull(),
+            activity = currentActivity,
+            nextActivityBegin = null,
             onActivityChange = { updatedActivity -> viewModel.onUpdateActivity(updatedActivity) },
-            onActivityDelete = { thisActivity -> viewModel.onDeleteActivity(thisActivity) }
+            onActivityDelete = { thisActivity -> viewModel.onDeleteActivity(thisActivity) },
         )
 
         Spacer(modifier = Modifier.height(16.dp))

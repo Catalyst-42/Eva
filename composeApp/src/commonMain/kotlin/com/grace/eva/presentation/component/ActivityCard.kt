@@ -55,7 +55,7 @@ fun ActivityEmptyCard() {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Выберите активность для начала трекера",
+                text = "Тут будет текущая активность",
                 modifier = Modifier.padding(8.dp),
                 fontWeight = FontWeight.Bold
             )
@@ -66,6 +66,7 @@ fun ActivityEmptyCard() {
 @Composable
 fun ActivityCard(
     activity: Activity?,
+    nextActivityBegin: Instant?,
     onActivityChange: (Activity) -> Unit,
     onActivityDelete: (Activity) -> Unit,
     expanded: Boolean = false
@@ -81,8 +82,8 @@ fun ActivityCard(
 
     var currentTime by remember { mutableStateOf(Clock.System.now()) }
 
-    LaunchedEffect(activity.end) {
-        if (activity.end == null) {
+    LaunchedEffect(nextActivityBegin) {
+        if (nextActivityBegin == null) {
             while (true) {
                 currentTime = Clock.System.now()
                 delay(1000L)
@@ -90,8 +91,8 @@ fun ActivityCard(
         }
     }
 
-    val duration = remember(activity.begin, activity.end, currentTime) {
-        val endTime = activity.end ?: currentTime
+    val duration = remember(activity.begin, nextActivityBegin, currentTime) {
+        val endTime = nextActivityBegin ?: currentTime
         formatDuration(endTime - activity.begin)
     }
 
@@ -101,7 +102,7 @@ fun ActivityCard(
             .clickable { expanded = !expanded },
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (activity.end == null)
+            containerColor = if (nextActivityBegin == null)
                 MaterialTheme.colorScheme.primaryContainer
             else
                 MaterialTheme.colorScheme.surfaceContainerLow
@@ -262,7 +263,7 @@ fun PreviewActivityCard() {
     val name = "Сон"
     val begin = Clock.System.now() - 666.seconds
     val activity = Activity(name, "", begin)
-    ActivityCard(activity, {}, {})
+    ActivityCard(activity, null, {}, {})
 }
 
 @Preview
@@ -272,7 +273,7 @@ fun PreviewActivityCardExpanded() {
     val note = "Здоровый сон"
     val begin = Clock.System.now() - 42.seconds
     val activity = Activity(name, note, begin)
-    ActivityCard(activity,  {}, {}, true)
+    ActivityCard(activity, null, {}, {}, true)
 }
 
 @Preview
@@ -281,7 +282,7 @@ fun PreviewListActivityCardExpanded() {
     val name = "И ещё что-то"
     val note = "Нездоровый сон"
     val begin = Clock.System.now() - 3.hours - 42.minutes - 16.seconds
-    val end = Clock.System.now()
-    val activity = Activity(name, note, begin, end)
-    ActivityCard(activity,  {}, {}, true)
+    val activity = Activity(name, note, begin)
+    val nextBegin = Clock.System.now() - 2.hours
+    ActivityCard(activity, nextBegin, {}, {}, true)
 }

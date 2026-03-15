@@ -102,11 +102,6 @@ class ActivitiesRepositoryImpl : ActivitiesRepository {
     override fun getActivities(): Flow<Activities> = activities.asStateFlow()
 
     override fun newActivity(name: String, note: String) {
-        // End previous activity if exists
-        activities.value.activities.lastOrNull()?.let {
-            it.end = Clock.System.now()
-        }
-
         // Create and add new activity
         val newActivity = Activity(name, note)
         activities.update { current ->

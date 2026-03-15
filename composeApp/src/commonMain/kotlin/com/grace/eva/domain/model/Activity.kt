@@ -11,6 +11,5 @@ data class Activity @OptIn(ExperimentalUuidApi::class) constructor(
     var name: String,
     var note: String = "",
     var begin: Instant = Clock.System.now(),
-    var end: Instant? = null, // TODO: Remove this field
     val id: String = Uuid.random().toString(),
 )

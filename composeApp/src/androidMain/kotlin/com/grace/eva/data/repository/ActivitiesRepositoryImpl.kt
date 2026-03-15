@@ -62,11 +62,6 @@ class ActivitiesRepositoryImpl(
     }
 
     override fun newActivity(name: String, note: String) {
-        // End previous activity
-        if (activities.value.activities.isNotEmpty()) {
-            activities.value.activities.last().end = Clock.System.now()
-        }
-
         // Create new activity
         val newActivity = Activity(name, note)
         val newList = activities.value.activities.toMutableList()
@@ -93,9 +88,6 @@ class ActivitiesRepositoryImpl(
             val newList = currentActivities.activities
                 .filter { it.id != activity.id }
                 .toMutableList()
-
-            // Ensure that last activity is not ended one
-            newList.lastOrNull()?.end = null
 
             currentActivities.copy(activities = newList)
         }

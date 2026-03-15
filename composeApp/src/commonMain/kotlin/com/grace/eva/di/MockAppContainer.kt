@@ -39,7 +39,6 @@ class MockAppContainer(
                     name = "Единственная активность",
                     note = "Простая заметка",
                     begin = Clock.System.now() - 30.minutes,
-                    end = null
                 )
             )
         )
@@ -50,22 +49,18 @@ class MockAppContainer(
                     "Планирование",
                     "Обсудили задачи",
                     Clock.System.now() - 5.hours - 32.minutes - 16.seconds,
-                    Clock.System.now() - 4.hours - 32.minutes - 16.seconds
                 ), Activity(
                     "Разработка",
                     "Пишем код",
                     Clock.System.now() - 4.hours - 32.minutes - 16.seconds,
-                    Clock.System.now() - 2.hours - 32.minutes - 16.seconds
                 ), Activity(
                     "Тестирование",
                     "Проверяем баги",
                     Clock.System.now() - 2.hours - 32.minutes - 16.seconds,
-                    Clock.System.now() - 1.hours - 32.minutes - 16.seconds
                 ), Activity(
                     "Релиз",
                     "Выпускаем версию",
                     Clock.System.now() - 1.hours - 32.minutes,
-                    null
                 )
             )
         )
