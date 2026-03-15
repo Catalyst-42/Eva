@@ -15,7 +15,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.grace.eva.di.AppContainer
-import com.grace.eva.presentation.screen.ActivityScreen
+import com.grace.eva.presentation.screen.ActivitiesScreen
 import com.grace.eva.presentation.screen.SettingsScreen
 import com.grace.eva.presentation.screen.StatsScreen
 import com.grace.eva.presentation.screen.TrackerScreen
@@ -51,7 +51,7 @@ fun NavGraph(
         }
 
         composable(Screen.Activities.route) {
-            ActivityScreen(appContainer)
+            ActivitiesScreen(appContainer)
         }
 
         composable(Screen.Stats.route) {

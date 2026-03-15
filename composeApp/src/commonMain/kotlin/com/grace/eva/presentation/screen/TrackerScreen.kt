@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -51,6 +52,13 @@ fun TrackerScreenContent(viewModel: TrackerViewModel) {
             .fillMaxSize()
             .padding(16.dp)
     ) {
+        Text(
+            text = "Текущая активность",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+
         ActivityCard(
             activity = state.activities.activities.lastOrNull(),
             onActivityChange = { updatedActivity -> viewModel.onUpdateActivity(updatedActivity) },
@@ -60,7 +68,13 @@ fun TrackerScreenContent(viewModel: TrackerViewModel) {
         Spacer(modifier = Modifier.height(16.dp))
 
         // Buttons
-        Text(text = "Переключить активность:")
+        Text(
+            text = "Переключить активность",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+
         Spacer(modifier = Modifier.height(8.dp))
 
         activityTypes.chunked(2).forEach { row ->

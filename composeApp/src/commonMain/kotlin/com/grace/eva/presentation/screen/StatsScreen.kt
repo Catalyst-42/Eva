@@ -1,13 +1,17 @@
 package com.grace.eva.presentation.screen
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
@@ -20,6 +24,7 @@ import com.grace.eva.di.MockAppContainer
 import com.grace.eva.di.MockType
 import com.grace.eva.presentation.viewmodel.TrackerViewModel
 import com.grace.eva.utils.formatDuration
+import com.grace.eva.utils.formatFloat
 import kotlinx.coroutines.delay
 import kotlin.time.Clock
 import kotlin.time.Duration
@@ -40,7 +45,6 @@ fun StatsScreenContent(viewModel: TrackerViewModel) {
     val state by viewModel.uiState.collectAsState()
     val activities = state.activities.activities
 
-    // Текущее время обновляется каждую секунду
     var currentTime by remember { mutableStateOf(Clock.System.now()) }
 
     LaunchedEffect(Unit) {
@@ -50,7 +54,6 @@ fun StatsScreenContent(viewModel: TrackerViewModel) {
         }
     }
 
-    // Статистика пересчитывается при изменении activities или currentTime
     val activityStats = remember(activities, currentTime) {
         activities
             .groupBy { it.name }
@@ -70,9 +73,14 @@ fun StatsScreenContent(viewModel: TrackerViewModel) {
         activityStats.sumOf { it.second.first.inWholeSeconds }.seconds
     }
 
+    val totalActivities = remember(activityStats) {
+        activityStats.sumOf { it.second.second }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
         if (activityStats.isEmpty()) {
@@ -92,7 +100,14 @@ fun StatsScreenContent(viewModel: TrackerViewModel) {
                 )
             }
         } else {
-            // Pie chart
+            Text(
+                text = "Плотность этапов",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+
+            // Horizontal bar chart with total stats below
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
@@ -100,40 +115,76 @@ fun StatsScreenContent(viewModel: TrackerViewModel) {
                 )
             ) {
                 Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp)
+                        .padding(vertical = 8.dp)
                 ) {
-                    val outlineColor = MaterialTheme.colorScheme.surface
+                    // Bar chart
+                    val lineColor = MaterialTheme.colorScheme.surface
+                    val borderColor = MaterialTheme.colorScheme.outlineVariant
 
                     Canvas(
-                        modifier = Modifier.size(80.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(32.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surface)
                     ) {
-                        var startAngle = -90f
-                        val values = activityStats.map { it.second.first.inWholeSeconds.toFloat() }
-                        val total = values.sum()
+                        val barWidth = size.width
+                        var startX = 0f
 
-                        values.forEachIndexed { index, value ->
-                            val sweepAngle = (value / total * 360f)
+                        activityStats.forEachIndexed { index, (_, stats) ->
+                            val weight = stats.first.inWholeSeconds.toFloat() / totalDuration.inWholeSeconds.toFloat()
+                            val segmentWidth = barWidth * weight
 
-                            drawArc(
+                            drawRect(
                                 color = chartColors[index % chartColors.size],
-                                startAngle = startAngle,
-                                sweepAngle = sweepAngle,
-                                useCenter = true
+                                topLeft = Offset(startX, 0f),
+                                size = androidx.compose.ui.geometry.Size(segmentWidth, size.height)
                             )
 
-                            drawArc(
-                                color = outlineColor,
-                                startAngle = startAngle,
-                                sweepAngle = sweepAngle,
-                                useCenter = true,
-                                style = Stroke(width = 1.5.dp.toPx())
-                            )
+                            // Draw separator
+                            if (index < activityStats.lastIndex) {
+                                drawLine(
+                                    color = lineColor,
+                                    start = Offset(startX + segmentWidth, 0f),
+                                    end = Offset(startX + segmentWidth, size.height),
+                                    strokeWidth = 4.dp.toPx()
+                                )
+                            }
 
-                            startAngle += sweepAngle
+                            startX += segmentWidth
                         }
+
+                        // Draw border
+                        drawRect(
+                            color = borderColor,
+                            size = size,
+                            style = Stroke(width = 1.dp.toPx())
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Total stats below the bar chart (replacing the separate card)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Всего этапов: $totalActivities",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+
+                        Text(
+                            text = formatDuration(totalDuration),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                 }
             }
@@ -147,55 +198,16 @@ fun StatsScreenContent(viewModel: TrackerViewModel) {
                 modifier = Modifier.padding(bottom = 8.dp)
             )
 
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(activityStats) { (name, stats) ->
-                    val (duration, count) = stats
-                    StatsLegendCard(
-                        name = name,
-                        duration = duration,
-                        count = count,
-                        totalDuration = totalDuration,
-                        color = chartColors[activityStats.indexOfFirst { it.first == name } % chartColors.size]
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Total summary card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
+            activityStats.forEach { (name, stats) ->
+                val (duration, count) = stats
+                StatsLegendCard(
+                    name = name,
+                    duration = duration,
+                    count = count,
+                    totalDuration = totalDuration,
+                    color = chartColors[activityStats.indexOfFirst { it.first == name } % chartColors.size],
+                    modifier = Modifier.padding(bottom = 16.dp)
                 )
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Всего активностей: ${activityStats.sumOf { it.second.second }}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-
-                        Text(
-                            text = formatDuration(totalDuration),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
             }
         }
     }
@@ -210,7 +222,10 @@ fun StatsLegendCard(
     color: Color,
     modifier: Modifier = Modifier
 ) {
-    val percentage = (duration.inWholeSeconds * 100 / totalDuration.inWholeSeconds).toInt()
+    val percentage = formatFloat(
+        duration.inWholeSeconds * 100f / totalDuration.inWholeSeconds,
+        2
+    )
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -233,7 +248,7 @@ fun StatsLegendCard(
                 shape = MaterialTheme.shapes.small
             ) {}
 
-            Spacer(modifier = Modifier.size(12.dp))
+            Spacer(modifier = Modifier.size(14.dp))
 
             Column(
                 modifier = Modifier.fillMaxWidth()

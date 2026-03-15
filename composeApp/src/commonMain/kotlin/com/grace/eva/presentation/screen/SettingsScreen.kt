@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -45,13 +46,21 @@ fun SettingsScreenContent(
     Column(
         modifier = Modifier.fillMaxWidth().padding(16.dp)
     ) {
+        Text(
+            text = "Настройки сохранений",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+
         ActivitiesCard(
             activities = activities,
             viewModel = viewModel,
             onNameChange = { newName ->
                 editedName = newName
                 // TODO: Implement name change
-            }
+            },
+            expanded = true
         )
 
         Spacer(modifier = Modifier.height(16.dp))

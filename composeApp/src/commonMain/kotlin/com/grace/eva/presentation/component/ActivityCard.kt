@@ -55,7 +55,7 @@ fun ActivityEmptyCard() {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Выберите этап для начала работы",
+                text = "Выберите активность для начала трекера",
                 modifier = Modifier.padding(8.dp),
                 fontWeight = FontWeight.Bold
             )
