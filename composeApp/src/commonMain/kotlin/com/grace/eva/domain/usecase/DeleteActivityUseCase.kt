@@ -3,10 +3,10 @@ package com.grace.eva.domain.usecase
 import com.grace.eva.domain.model.Activity
 import com.grace.eva.domain.repository.ActivitiesRepository
 
-class DeleteActivityUseCase(
+open class DeleteActivityUseCase(
     private val repository: ActivitiesRepository
 ) {
-    operator fun invoke(activity: Activity) {
+    open suspend operator fun invoke(activity: Activity) {
         repository.deleteActivity(activity)
     }
 }

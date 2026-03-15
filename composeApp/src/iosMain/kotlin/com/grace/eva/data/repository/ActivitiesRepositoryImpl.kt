@@ -7,13 +7,36 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.json.Json
+import platform.Foundation.NSData
+import platform.Foundation.NSDocumentDirectory
+import platform.Foundation.NSFileManager
+import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSUserDefaults
+import platform.Foundation.NSUserDomainMask
+import platform.Foundation.create
+import platform.UIKit.UIActivityViewController
+import platform.UIKit.UIApplication
+import platform.UIKit.UIViewController
+import kotlin.coroutines.resumeWithException
 import kotlin.time.Clock
+import kotlinx.cinterop.BetaInteropApi
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.addressOf
+import kotlinx.cinterop.usePinned
+import kotlinx.coroutines.suspendCancellableCoroutine
+import platform.Foundation.NSSearchPathForDirectoriesInDomains
+import platform.Foundation.NSDocumentDirectory
+import platform.Foundation.NSUserDomainMask
+import platform.Foundation.NSURL
+import platform.Foundation.writeToFile
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 class ActivitiesRepositoryImpl(): ActivitiesRepository {
     private val activities = MutableStateFlow(
-        Activities(Clock.System.now(), mutableListOf())
+        Activities("Новое сохранение", mutableListOf())
     )
 
     private val json = Json {
@@ -59,7 +82,6 @@ class ActivitiesRepositoryImpl(): ActivitiesRepository {
         newList.add(newActivity)
 
         activities.value = Activities(
-            begin = activities.value.begin,
             activities = newList
         )
 
@@ -96,5 +118,76 @@ class ActivitiesRepositoryImpl(): ActivitiesRepository {
         }
 
         saveActivities()
+    }
+
+    @OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
+    override suspend fun exportActivities(activities: Activities) {
+        val jsonString = try {
+            json.encodeToString(activities)
+        } catch (e: Exception) {
+            return
+        }
+
+        suspendCancellableCoroutine<Unit> { continuation ->
+            try {
+                // Get documents directory
+                val documentsPath = NSSearchPathForDirectoriesInDomains(
+                    NSDocumentDirectory,
+                    NSUserDomainMask,
+                    true
+                ).firstOrNull() as? String ?: run {
+                    continuation.resumeWithException(Exception("Could not get documents directory"))
+                    return@suspendCancellableCoroutine
+                }
+
+                val fileName = "eva_save_${Clock.System.now().toEpochMilliseconds()}.json"
+                val filePath = "$documentsPath/$fileName"
+
+                // Convert string to NSData
+                val bytes = jsonString.encodeToByteArray()
+                val data = bytes.usePinned { pinned ->
+                    pinned.addressOf(0).let { address ->
+                        NSData.create(bytes = address, length = bytes.size.toULong())
+                    }
+                }
+
+                // Write to file
+                val success = data.writeToFile(filePath, true)
+                if (!success) {
+                    continuation.resumeWithException(Exception("Failed to write file"))
+                    return@suspendCancellableCoroutine
+                }
+
+                // Create file URL for sharing
+                val fileURL = NSURL.fileURLWithPath(filePath)
+
+                val activityVC = UIActivityViewController(
+                    activityItems = listOf(fileURL),
+                    applicationActivities = null
+                )
+
+                val keyWindow = UIApplication.sharedApplication.keyWindow
+                val rootViewController = keyWindow?.rootViewController
+                val topController = getTopViewController(rootViewController)
+
+                if (topController != null) {
+                    topController.presentViewController(activityVC, true, null)
+                    continuation.resume(Unit)
+                } else {
+                    continuation.resumeWithException(Exception("Could not find top view controller"))
+                }
+
+            } catch (e: Exception) {
+                continuation.resumeWithException(e)
+            }
+        }
+    }
+
+    private fun getTopViewController(controller: UIViewController?): UIViewController? {
+        if (controller == null) return null
+        if (controller.presentedViewController != null) {
+            return getTopViewController(controller.presentedViewController)
+        }
+        return controller
     }
 }

@@ -64,6 +64,12 @@ class TrackerViewModel(
         }
     }
 
+    fun onActivitiesExport(activities: Activities) {
+        viewModelScope.launch {
+            appContainer.activitiesExportUseCase(activities)
+        }
+    }
+
     @Suppress("UNCHECKED_CAST")
     class Factory(
         private val appContainer: AppContainer

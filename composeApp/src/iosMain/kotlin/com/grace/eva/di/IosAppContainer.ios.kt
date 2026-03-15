@@ -2,6 +2,7 @@ package com.grace.eva.di
 
 import com.grace.eva.data.repository.ActivitiesRepositoryImpl
 import com.grace.eva.domain.repository.ActivitiesRepository
+import com.grace.eva.domain.usecase.ActivitiesExportUseCase
 import com.grace.eva.domain.usecase.AddNoteToLastActivityUseCase
 import com.grace.eva.domain.usecase.DeleteActivityUseCase
 import com.grace.eva.domain.usecase.GetActivitiesUseCase
@@ -25,6 +26,8 @@ class IosAppContainer : AppContainer {
         SaveActivitiesUseCase(activitiesRepository)
     override val updateActivityUseCase: UpdateActivityUseCase =
         UpdateActivityUseCase(activitiesRepository)
+    override val activitiesExportUseCase: ActivitiesExportUseCase =
+        ActivitiesExportUseCase(activitiesRepository)
 }
 
 actual fun createAppContainer(): AppContainer = IosAppContainer()

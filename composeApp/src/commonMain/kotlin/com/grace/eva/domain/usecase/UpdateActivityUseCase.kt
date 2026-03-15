@@ -3,10 +3,10 @@ package com.grace.eva.domain.usecase
 import com.grace.eva.domain.model.Activity
 import com.grace.eva.domain.repository.ActivitiesRepository
 
-class UpdateActivityUseCase(
+open class UpdateActivityUseCase(
     private val repository: ActivitiesRepository
 ) {
-    operator fun invoke(activity: Activity) {
+    open suspend operator fun invoke(activity: Activity) {
         repository.updateActivity(activity)
     }
 }

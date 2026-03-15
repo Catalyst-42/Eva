@@ -20,7 +20,6 @@ class ActivitiesRepositoryImpl(
     val activities = MutableStateFlow(
         Activities(
             "Activities",
-            Clock.System.now(),
             mutableListOf()
         )
     )
@@ -74,7 +73,7 @@ class ActivitiesRepositoryImpl(
         newList.add(newActivity)
 
         activities.value = Activities(
-            begin = activities.value.begin,
+            name = activities.value.name,
             activities = newList
         )
 
@@ -114,5 +113,9 @@ class ActivitiesRepositoryImpl(
         }
 
         saveActivities()
+    }
+
+    override suspend fun exportActivities(activities: Activities) {
+        // TODO: Implement, please
     }
 }

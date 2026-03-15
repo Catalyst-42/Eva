@@ -137,9 +137,9 @@ fun PreviewActivitiesTotal() {
 @Composable
 fun PreviewActivitiesList() {
     val activities: MutableList<Activity> = mutableListOf(
-        Activity("Первое", "", now() - 1.hours),
-        Activity("Второе", "", now() - 2.hours, end = now() - 1.hours),
-        Activity("Третье", "Начало начал", now() - 4.hours, end = now() - 3.hours),
+        Activity("Первое", "Начало начал", now() - 4.hours, end = now() - 3.hours),
+        Activity("Среднее", "", now() - 2.hours, end = now() - 1.hours),
+        Activity("Последнее", "", now() - 1.hours),
     )
 
     ActivitiesList(activities, {}, {})

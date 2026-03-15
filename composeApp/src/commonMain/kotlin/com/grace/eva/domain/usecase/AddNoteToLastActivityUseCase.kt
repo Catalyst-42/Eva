@@ -2,10 +2,10 @@ package com.grace.eva.domain.usecase
 
 import com.grace.eva.domain.repository.ActivitiesRepository
 
-class AddNoteToLastActivityUseCase(
+open class AddNoteToLastActivityUseCase(
     private val repository: ActivitiesRepository
 ) {
-    operator fun invoke(note: String) {
+    open suspend operator fun invoke(note: String) {
         repository.addNote(note)
     }
 }

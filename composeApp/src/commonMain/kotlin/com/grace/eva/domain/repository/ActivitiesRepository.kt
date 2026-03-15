@@ -13,4 +13,5 @@ interface ActivitiesRepository {
     fun addNote(note: String)
     fun deleteActivity(activity: Activity)
     fun updateActivity(activity: Activity)
+    suspend fun exportActivities(activities: Activities)
 }
