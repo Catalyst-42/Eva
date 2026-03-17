@@ -14,7 +14,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -43,14 +42,18 @@ fun StatsScreen(
 @Composable
 fun StatsScreenContent(viewModel: TrackerViewModel) {
     val state by viewModel.uiState.collectAsState()
-    val activities = state.activities.activities
+    val currentSave = state.currentSave
+    val activities = currentSave?.activities ?: emptyList()
+    val isSaveCompleted = currentSave?.end != null
 
     var currentTime by remember { mutableStateOf(Clock.System.now()) }
 
     LaunchedEffect(Unit) {
-        while (true) {
-            currentTime = Clock.System.now()
-            delay(1000L)
+        if (!isSaveCompleted) {
+            while (true) {
+                currentTime = Clock.System.now()
+                delay(1000L)
+            }
         }
     }
 
@@ -59,13 +62,13 @@ fun StatsScreenContent(viewModel: TrackerViewModel) {
         activities.sortedBy { it.begin }
     }
 
-    val activityStats = remember(sortedActivities, currentTime) {
-        // Calculate durations using next activity's begin time
+    val activityStats = remember(sortedActivities, currentTime, currentSave) {
+        // Calculate durations using next activity's begin time or save end
         val activitiesWithDuration = sortedActivities.mapIndexed { index, activity ->
-            val endTime = if (index < sortedActivities.lastIndex) {
-                sortedActivities[index + 1].begin
-            } else {
-                currentTime
+            val endTime = when {
+                index < sortedActivities.lastIndex -> sortedActivities[index + 1].begin
+                isSaveCompleted -> currentSave.end
+                else -> currentTime
             }
             val duration = endTime - activity.begin
             activity.name to duration
@@ -83,7 +86,9 @@ fun StatsScreenContent(viewModel: TrackerViewModel) {
             .toList()
     }
 
-    val totalDuration = remember(activityStats) {
+    val totalDuration = if (isSaveCompleted && sortedActivities.isNotEmpty()) {
+        currentSave.end - sortedActivities.first().begin
+    } else {
         activityStats.sumOf { it.second.first.inWholeSeconds }.seconds
     }
 
@@ -97,7 +102,23 @@ fun StatsScreenContent(viewModel: TrackerViewModel) {
             .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
-        if (activityStats.isEmpty()) {
+        if (currentSave == null) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Text(
+                    text = "Нет активного сохранения",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else if (activityStats.isEmpty()) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
@@ -114,6 +135,7 @@ fun StatsScreenContent(viewModel: TrackerViewModel) {
                 )
             }
         } else {
+
             Text(
                 text = "Плотность этапов",
                 style = MaterialTheme.typography.titleMedium,
@@ -157,7 +179,6 @@ fun StatsScreenContent(viewModel: TrackerViewModel) {
                                 size = androidx.compose.ui.geometry.Size(segmentWidth, size.height)
                             )
 
-                            // Draw separator
                             if (index < activityStats.lastIndex) {
                                 drawLine(
                                     color = lineColor,
@@ -170,7 +191,6 @@ fun StatsScreenContent(viewModel: TrackerViewModel) {
                             startX += segmentWidth
                         }
 
-                        // Draw border
                         drawRect(
                             color = borderColor,
                             size = size,
@@ -180,7 +200,6 @@ fun StatsScreenContent(viewModel: TrackerViewModel) {
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // Total stats below the bar chart
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -329,6 +348,15 @@ private val chartColors = listOf(
 fun PreviewStatsScreen() {
     val mockViewModel = remember {
         TrackerViewModel(appContainer = MockAppContainer(MockType.LARGE))
+    }
+    StatsScreenContent(mockViewModel)
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewStatsScreen_NoSave() {
+    val mockViewModel = remember {
+        TrackerViewModel(appContainer = MockAppContainer(MockType.EMPTY))
     }
     StatsScreenContent(mockViewModel)
 }

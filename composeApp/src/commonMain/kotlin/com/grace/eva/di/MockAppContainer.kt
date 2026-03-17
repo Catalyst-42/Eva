@@ -1,15 +1,20 @@
 package com.grace.eva.di
 
-import com.grace.eva.domain.model.Activities
+import com.grace.eva.domain.model.Save
 import com.grace.eva.domain.model.Activity
-import com.grace.eva.domain.repository.ActivitiesRepository
-import com.grace.eva.domain.repository.MockActivitiesRepository
-import com.grace.eva.domain.usecase.ActivitiesExportUseCase
-import com.grace.eva.domain.usecase.ActivityRemoveUseCase
-import com.grace.eva.domain.usecase.ActivitiesGetUseCase
-import com.grace.eva.domain.usecase.ActivityNewUseCase
-import com.grace.eva.domain.usecase.ActivitiesSaveUseCase
-import com.grace.eva.domain.usecase.ActivityUpdateUseCase
+import com.grace.eva.domain.repository.MockTrackerRepository
+import com.grace.eva.domain.repository.TrackerRepository
+import com.grace.eva.domain.usecase.activity.CreateActivityUseCase
+import com.grace.eva.domain.usecase.activity.RemoveActivityUseCase
+import com.grace.eva.domain.usecase.activity.UpdateActivityUseCase
+import com.grace.eva.domain.usecase.sync.ExportSaveUseCase
+import com.grace.eva.domain.usecase.save.CreateSaveUseCase
+import com.grace.eva.domain.usecase.save.DeleteSaveUseCase
+import com.grace.eva.domain.usecase.save.GetAllSavesUseCase
+import com.grace.eva.domain.usecase.save.GetCurrentSaveUseCase
+import com.grace.eva.domain.usecase.save.SetCurrentSaveUseCase
+import com.grace.eva.domain.usecase.save.UpdateSaveUseCase
+import com.grace.eva.domain.usecase.sync.ImportSaveUseCase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlin.time.Clock
@@ -22,89 +27,71 @@ enum class MockType {
 }
 
 class MockAppContainer(
-    private val type: MockType = MockType.EMPTY
+    private val type: MockType = MockType.EMPTY,
 ) : AppContainer {
-    private val mockRepo = MockActivitiesRepository()
 
-    // Factory to create test data based on type
-    private fun createMockActivities(): Activities = when (type) {
-        MockType.EMPTY -> Activities(
-            name = "Новое сохранение", activities = mutableListOf()
-        )
+    override val trackerRepository: TrackerRepository = MockTrackerRepository()
 
-        MockType.SIMPLE -> Activities(
-            name = "Тестовое сохранение", activities = mutableListOf(
-                Activity(
-                    name = "Единственная активность",
-                    note = "Простая заметка",
-                    begin = Clock.System.now() - 30.minutes,
-                )
+    private val mockSave = when (type) {
+        MockType.EMPTY -> Save(name = "Новое сохранение")
+        MockType.SIMPLE -> Save(
+            name = "Тестовое сохранение",
+            activities = mutableListOf(
+                Activity("Единственная активность", "Простая заметка", Clock.System.now() - 30.minutes)
             )
         )
-
-        MockType.LARGE -> Activities(
-            name = "Большой проект", activities = mutableListOf(
-                Activity(
-                    "Планирование",
-                    "Обсудили задачи",
-                    Clock.System.now() - 5.hours - 32.minutes - 16.seconds,
-                ), Activity(
-                    "Разработка",
-                    "Пишем код",
-                    Clock.System.now() - 4.hours - 32.minutes - 16.seconds,
-                ), Activity(
-                    "Тестирование",
-                    "Проверяем баги",
-                    Clock.System.now() - 2.hours - 32.minutes - 16.seconds,
-                ), Activity(
-                    "Релиз",
-                    "Выпускаем версию",
-                    Clock.System.now() - 1.hours - 32.minutes,
-                )
+        MockType.LARGE -> Save(
+            name = "Большой проект",
+            activities = mutableListOf(
+                Activity("Планирование", "Обсудили задачи", Clock.System.now() - 5.hours - 32.minutes - 16.seconds),
+                Activity("Разработка", "Пишем код", Clock.System.now() - 4.hours - 32.minutes - 16.seconds),
+                Activity("Тестирование", "Проверяем баги", Clock.System.now() - 2.hours - 32.minutes - 16.seconds),
+                Activity("Релиз", "Выпускаем версию", Clock.System.now() - 1.hours - 32.minutes)
             )
         )
     }
 
-    private val mockActivities = createMockActivities()
-
-    // Generic use case that does nothing
-    private inner class MockUseCase(private val repo: ActivitiesRepository) {
-        @Suppress("UNCHECKED_CAST")
-        inline fun <reified T> asUseCase(): T = when (T::class) {
-            ActivitiesGetUseCase::class -> object : ActivitiesGetUseCase(repo) {
-                override fun invoke(): Flow<Activities> = flowOf(mockActivities)
-            } as T
-
-            ActivityNewUseCase::class -> object : ActivityNewUseCase(repo) {
-                override suspend fun invoke(name: String, note: String) {}
-            } as T
-
-            ActivityRemoveUseCase::class -> object : ActivityRemoveUseCase(repo) {
-                override suspend fun invoke(activity: Activity) {}
-            } as T
-
-            ActivitiesSaveUseCase::class -> object : ActivitiesSaveUseCase(repo) {
-                override suspend fun invoke() {}
-            } as T
-
-            ActivityUpdateUseCase::class -> object : ActivityUpdateUseCase(repo) {
-                override suspend fun invoke(activity: Activity) {}
-            } as T
-
-            ActivitiesExportUseCase::class -> object : ActivitiesExportUseCase(repo) {
-                override suspend fun invoke(activities: Activities) {}
-            } as T
-
-            else -> error("Unknown use case")
-        }
+    override val getAllSavesUseCase = object : GetAllSavesUseCase(trackerRepository) {
+        override suspend fun invoke(): Flow<List<Save>> = flowOf(listOf(mockSave))
     }
 
-    private val mockUseCase = MockUseCase(mockRepo)
+    override val getCurrentSaveUseCase = object : GetCurrentSaveUseCase(trackerRepository) {
+        override suspend fun invoke(): Flow<Save?> = flowOf(mockSave)
+    }
 
-    override val activitiesGetUseCase: ActivitiesGetUseCase = mockUseCase.asUseCase()
-    override val activityNewUseCase: ActivityNewUseCase = mockUseCase.asUseCase()
-    override val activityRemoveUseCase: ActivityRemoveUseCase = mockUseCase.asUseCase()
-    override val activitiesSaveUseCase: ActivitiesSaveUseCase = mockUseCase.asUseCase()
-    override val activityUpdateUseCase: ActivityUpdateUseCase = mockUseCase.asUseCase()
-    override val activitiesExportUseCase: ActivitiesExportUseCase = mockUseCase.asUseCase()
+    override val setCurrentSaveUseCase = object : SetCurrentSaveUseCase(trackerRepository) {
+        override suspend fun invoke(save: Save) {}
+    }
+
+    override val createSaveUseCase = object : CreateSaveUseCase(trackerRepository) {
+        override suspend fun invoke(name: String): Save = Save(name = name)
+    }
+
+    override val deleteSaveUseCase = object : DeleteSaveUseCase(trackerRepository) {
+        override suspend fun invoke(save: Save) {}
+    }
+
+    override val updateSaveUseCase = object : UpdateSaveUseCase(trackerRepository) {
+        override suspend fun invoke(save: Save) {}
+    }
+
+    override val createActivityUseCase = object : CreateActivityUseCase(trackerRepository) {
+        override suspend fun invoke(name: String) {}
+    }
+
+    override val removeActivityUseCase = object : RemoveActivityUseCase(trackerRepository) {
+        override suspend fun invoke(activity: Activity) {}
+    }
+
+    override val updateActivityUseCase = object : UpdateActivityUseCase(trackerRepository) {
+        override suspend fun invoke(activity: Activity) {}
+    }
+
+    override val exportSaveUseCase = object : ExportSaveUseCase(trackerRepository) {
+        override suspend fun invoke(save: Save) {}
+    }
+
+    override val importSaveUseCase = object : ImportSaveUseCase(trackerRepository) {
+        override suspend fun invoke() {}
+    }
 }

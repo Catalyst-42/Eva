@@ -6,7 +6,7 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 @Serializable
-data class Activities @OptIn(ExperimentalUuidApi::class) constructor(
+data class Save @OptIn(ExperimentalUuidApi::class) constructor(
     val name: String = "Новое сохранение",
     val activities: MutableList<Activity> = mutableListOf(),
     val end: Instant? = null,

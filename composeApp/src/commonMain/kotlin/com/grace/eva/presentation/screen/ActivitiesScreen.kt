@@ -9,7 +9,6 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -25,7 +24,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.grace.eva.di.AppContainer
 import com.grace.eva.di.MockAppContainer
 import com.grace.eva.di.MockType
-import com.grace.eva.domain.model.Activity
 import com.grace.eva.presentation.component.ActivityCard
 import com.grace.eva.presentation.viewmodel.TrackerViewModel
 import kotlinx.coroutines.launch
@@ -40,10 +38,13 @@ fun ActivitiesScreen(
 
     ActivityScreenContent(viewModel)
 }
+
 @Composable
 fun ActivityScreenContent(viewModel: TrackerViewModel) {
     val state by viewModel.uiState.collectAsState()
-    val activities = state.activities.activities
+
+    // Safe handling of currentSave
+    val activities = state.currentSave?.activities ?: emptyList()
 
     var searchQuery by rememberSaveable { mutableStateOf("") }
     val scope = rememberCoroutineScope()
@@ -80,6 +81,25 @@ fun ActivityScreenContent(viewModel: TrackerViewModel) {
             .fillMaxSize()
             .padding(top = 16.dp)
     ) {
+        // Show warning if no save is selected
+        if (state.currentSave == null) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer
+                )
+            ) {
+                Text(
+                    text = "Нет активного сохранения. Выберите сохранение в списке.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
+        }
+
         Text(
             text = "Последние активности",
             style = MaterialTheme.typography.titleMedium,
@@ -176,7 +196,29 @@ fun ActivityScreenContent(viewModel: TrackerViewModel) {
             verticalArrangement = Arrangement.spacedBy(16.dp),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp)
         ) {
-            if (filteredActivities.isEmpty()) {
+            if (state.currentSave == null) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "Выберите сохранение для просмотра активностей",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            } else if (filteredActivities.isEmpty()) {
                 item {
                     EmptyActivitiesCard()
                 }
@@ -198,9 +240,8 @@ fun ActivityScreenContent(viewModel: TrackerViewModel) {
 
                     ActivityCard(
                         activity = activity,
-                        nextActivityBegin = nextActivityBegin,
-                        onActivityChange = { activity -> viewModel.onUpdateActivity(activity) },
-                        onActivityDelete = { activity -> viewModel.onDeleteActivity(activity) }
+                        viewModel = viewModel,
+                        expanded = false
                     )
                 }
             }
@@ -242,6 +283,16 @@ fun PreviewEmptyActivitiesCard_NoActivities() {
 fun PreviewActivitiesScreen() {
     val mockViewModel = remember {
         TrackerViewModel(appContainer = MockAppContainer(MockType.LARGE))
+    }
+
+    ActivityScreenContent(mockViewModel)
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewActivitiesScreen_NoSaveSelected() {
+    val mockViewModel = remember {
+        TrackerViewModel(appContainer = MockAppContainer(MockType.EMPTY))
     }
 
     ActivityScreenContent(mockViewModel)

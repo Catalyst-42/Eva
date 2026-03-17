@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -21,14 +23,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.grace.eva.di.AppContainer
 import com.grace.eva.di.MockAppContainer
-import com.grace.eva.domain.model.Activities
-import com.grace.eva.domain.model.Activity
-import com.grace.eva.presentation.component.ActivitiesCard
+import com.grace.eva.di.MockType
 import com.grace.eva.presentation.component.ActivityCard
 import com.grace.eva.presentation.viewmodel.TrackerViewModel
-import kotlin.time.Clock.System.now
-import kotlin.time.Duration.Companion.hours
-import kotlin.time.Duration.Companion.seconds
 
 @Composable
 fun TrackerScreen(
@@ -44,14 +41,15 @@ fun TrackerScreen(
 @Composable
 fun TrackerScreenContent(viewModel: TrackerViewModel) {
     val state by viewModel.uiState.collectAsState()
-    val activities = state.activities.activities
+    val currentSave = state.currentSave
+    val activities = currentSave?.activities ?: emptyList()
 
-    //  TODO: Make ability to change this list content
+    // TODO: Make ability to change this list content
     val activityTypes = listOf("Сон", "Отдых", "Пары", "Транспорт", "Домашка", "Другое")
 
-    // Get the last activity (current activity) and the one before it for proper duration calculation
+    // Get the last activity - this is the current one
     val currentActivity = activities.lastOrNull()
-    val previousActivity = if (activities.size >= 2) activities[activities.size - 2] else null
+    val isSaveActive = currentSave?.end == null
 
     Column(
         modifier = Modifier
@@ -65,18 +63,34 @@ fun TrackerScreenContent(viewModel: TrackerViewModel) {
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
-        ActivityCard(
-            activity = currentActivity,
-            nextActivityBegin = null,
-            onActivityChange = { updatedActivity -> viewModel.onUpdateActivity(updatedActivity) },
-            onActivityDelete = { thisActivity -> viewModel.onDeleteActivity(thisActivity) },
-        )
+        if (currentSave == null) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Text(
+                    text = "Нет активного сохранения",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
+            ActivityCard(
+                activity = currentActivity,
+                viewModel = viewModel,
+                expanded = false
+            )
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Buttons
         Text(
-            text = "Переключить активность",
+            text = if (isSaveActive) "Переключить активность" else "Сохранение завершено",
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.padding(bottom = 8.dp)
@@ -92,9 +106,12 @@ fun TrackerScreenContent(viewModel: TrackerViewModel) {
                 row.forEach { name ->
                     Button(
                         onClick = {
-                            viewModel.onNewActivity(name)
+                            if (currentSave != null && isSaveActive) {
+                                viewModel.onCreateActivity(name)
+                            }
                         },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        enabled = currentSave != null && isSaveActive
                     ) {
                         Text(name)
                     }
@@ -103,6 +120,22 @@ fun TrackerScreenContent(viewModel: TrackerViewModel) {
             }
             Spacer(modifier = Modifier.height(8.dp))
         }
+
+        if (currentSave == null) {
+            Text(
+                text = "Выберите сохранение в настройках",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        } else if (!isSaveActive) {
+            Text(
+                text = "Чтобы переключать этапы, продолжите сохранение в настройках",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
     }
 }
 
@@ -110,7 +143,17 @@ fun TrackerScreenContent(viewModel: TrackerViewModel) {
 @Composable
 fun PreviewTrackerScreen() {
     val mockViewModel = remember {
-        TrackerViewModel(appContainer = MockAppContainer())
+        TrackerViewModel(appContainer = MockAppContainer(MockType.SIMPLE))
+    }
+
+    TrackerScreenContent(mockViewModel)
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewTrackerScreen_NoSave() {
+    val mockViewModel = remember {
+        TrackerViewModel(appContainer = MockAppContainer(MockType.EMPTY))
     }
 
     TrackerScreenContent(mockViewModel)

@@ -18,6 +18,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,7 +30,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.grace.eva.di.MockAppContainer
 import com.grace.eva.di.MockType
-import com.grace.eva.domain.model.Activities
+import com.grace.eva.domain.model.Save
 import com.grace.eva.presentation.viewmodel.TrackerViewModel
 import com.grace.eva.utils.formatDuration
 import com.grace.eva.utils.formatTime
@@ -39,33 +40,49 @@ import kotlin.time.Duration
 import kotlin.time.Instant
 
 @Composable
-fun ActivitiesCard(
-    activities: Activities,
+fun SaveCard(
+    save: Save,
     viewModel: TrackerViewModel,
-    onNameChange: (String) -> Unit,
     expanded: Boolean = false
 ) {
     var expanded by remember { mutableStateOf(expanded) }
-    var editedName by remember(activities.name) { mutableStateOf(activities.name) }
-    var editedEnd by remember(activities.end) { mutableStateOf(activities.end) }
+    var editedName by remember(save.name) { mutableStateOf(save.name) }
+    var editedEnd by remember(save.end) { mutableStateOf(save.end) }
     var duration by remember { mutableStateOf(Duration.ZERO) }
 
-    LaunchedEffect(activities.activities.size) {
-        while (true) {
-            duration = now() - (activities.activities.firstOrNull()?.begin ?: now())
-            delay(1000)
+    val state by viewModel.uiState.collectAsState()
+    val isCurrentSave = state.currentSave?.id == save.id
+    val isSaveActive = save.end == null
+
+    val firstActivityBegin = save.activities.firstOrNull()?.begin
+
+    LaunchedEffect(save.activities.size, save.end) {
+        if (isSaveActive && firstActivityBegin != null) {
+            while (true) {
+                duration = now() - firstActivityBegin
+                delay(1000)
+            }
+        } else if (!isSaveActive && firstActivityBegin != null) {
+            duration = save.end - firstActivityBegin
         }
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded },
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { expanded = !expanded },
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
+            containerColor = if (isCurrentSave)
+                MaterialTheme.colorScheme.primaryContainer
+            else
+                MaterialTheme.colorScheme.surfaceContainerLow
         )
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(16.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -73,16 +90,16 @@ fun ActivitiesCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = activities.name,
+                    text = save.name,
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
 
-                val begin = if (activities.activities.isNotEmpty()) {
-                    formatTime(activities.activities.first().begin, "dd.mm.yyyy")
+                val begin = if (save.activities.isNotEmpty()) {
+                    formatTime(save.activities.first().begin, "dd.mm.yyyy")
                 } else {
                     "Не начато"
                 }
@@ -98,10 +115,11 @@ fun ActivitiesCard(
             Spacer(modifier = Modifier.height(4.dp))
 
             Row(
-                modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Этапов: ${activities.activities.size}",
+                    text = "Этапов: ${save.activities.size}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -116,17 +134,15 @@ fun ActivitiesCard(
             if (expanded) {
                 Spacer(modifier = Modifier.height(16.dp))
 
-                ActivitiesCardControls(
-                    activities = activities,
+                SaveCardControls(
+                    save = save,
                     editedName = editedName,
                     editedEnd = editedEnd,
-                    viewModel = viewModel,
-                    onNameChange = {
-                        editedName = it
-                        onNameChange(it)
+                    onNameChange = { editedName = it },
+                    onEndChange = { newEnd ->
+                        editedEnd = newEnd
                     },
-                    onEndChange = { /* TODO: Make available to set end time to now() */ },
-                    onActivitiesSave = { viewModel.onSaveActivities() }
+                    viewModel = viewModel,
                 )
             }
         }
@@ -134,17 +150,26 @@ fun ActivitiesCard(
 }
 
 @Composable
-fun ActivitiesCardControls(
-    activities: Activities,
+fun SaveCardControls(
+    save: Save,
     editedName: String,
     editedEnd: Instant?,
-    viewModel: TrackerViewModel,
     onNameChange: (String) -> Unit,
-    onEndChange: (String) -> Unit,
-    onActivitiesSave: () -> Unit
+    onEndChange: (Instant?) -> Unit,
+    viewModel: TrackerViewModel,
 ) {
+    var localEditedEnd by remember(editedEnd) { mutableStateOf(editedEnd) }
+
+    LaunchedEffect(editedEnd) {
+        localEditedEnd = editedEnd
+    }
+
+    val state by viewModel.uiState.collectAsState()
+    val isCurrentSave = state.currentSave?.id == save.id
+
     Column(
-        modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         OutlinedTextField(
             value = editedName,
@@ -155,19 +180,21 @@ fun ActivitiesCardControls(
         )
 
         OutlinedTextField(
-            value = if (editedEnd != null) formatTime(editedEnd) else "Нет",
-            onValueChange = onEndChange,
+            value = localEditedEnd?.let { formatTime(it) } ?: "Нет",
+            onValueChange = {
+                // TODO: Implement date picker
+            },
             label = { Text("Завершено") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-            enabled = editedEnd != null,
+            enabled = save.end != null,
         )
     }
 
     Spacer(modifier = Modifier.height(16.dp))
 
     Button(
-        onClick = { viewModel.onActivitiesExport(activities) },
+        onClick = { viewModel.onExportSave(save) },
         modifier = Modifier.fillMaxWidth(),
     ) {
         Text("Экспортировать")
@@ -176,40 +203,59 @@ fun ActivitiesCardControls(
     Spacer(modifier = Modifier.height(8.dp))
 
     Row(
-        modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Button(
-            onClick = { /* TODO: Complete save */ },
-            modifier = Modifier.weight(1f)
+            onClick = {
+                if (save.end == null) {
+                    viewModel.onCompleteSave(save)
+                } else {
+                    viewModel.onContinueSave(save)
+                }
+            },
+            modifier = Modifier.weight(1f),
         ) {
-            Text("Завершить")
+            Text(if (save.end == null) "Завершить" else "Продолжить")
         }
 
         Button(
-            onClick = { /* TODO: Activate save */ },
+            onClick = {
+                viewModel.onSetCurrentSave(save)
+            },
             modifier = Modifier.weight(1f),
+            enabled = !isCurrentSave
         ) {
-            Text("Активировать")
+            Text(if (isCurrentSave) "Загружено" else "Загрузить")
         }
     }
 
     Spacer(modifier = Modifier.height(8.dp))
 
     Row(
-        modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         OutlinedButton(
-            onClick = { /* TODO: Delete save */ },
+            onClick = {
+                viewModel.onDeleteSave(save)
+            },
             modifier = Modifier.weight(1f),
             border = BorderStroke(
                 width = 1.dp,
-                color = MaterialTheme.colorScheme.outline)
+                color = MaterialTheme.colorScheme.outline
+            )
         ) {
             Text("Удалить")
         }
 
         Button(
-            onClick = { onActivitiesSave() },
+            onClick = {
+                viewModel.onRenameSave(save, editedName)
+                if (localEditedEnd != save.end) {
+                    viewModel.onUpdateSaveEnd(save, localEditedEnd)
+                }
+            },
             modifier = Modifier.weight(1f)
         ) {
             Text("Сохранить")
@@ -219,15 +265,32 @@ fun ActivitiesCardControls(
 
 @Preview
 @Composable
-fun PreviewActivitiesCard() {
+fun PreviewSaveCard() {
     val mockViewModel = remember {
         TrackerViewModel(appContainer = MockAppContainer(MockType.SIMPLE))
     }
 
-    ActivitiesCard(
-        activities = mockViewModel.uiState.value.activities,
+    SaveCard(
+        save = mockViewModel.uiState.value.currentSave ?: Save(),
         viewModel = mockViewModel,
-        onNameChange = {},
+        expanded = true
+    )
+}
+
+@Preview
+@Composable
+fun PreviewSaveCardCompleted() {
+    val mockViewModel = remember {
+        TrackerViewModel(appContainer = MockAppContainer(MockType.SIMPLE))
+    }
+
+    val completedSave = (mockViewModel.uiState.value.currentSave ?: Save()).copy(
+        end = now()
+    )
+
+    SaveCard(
+        save = completedSave,
+        viewModel = mockViewModel,
         expanded = true
     )
 }

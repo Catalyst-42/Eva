@@ -1,30 +1,39 @@
 package com.grace.eva.di
 
-import com.grace.eva.data.repository.ActivitiesRepositoryImpl
-import com.grace.eva.domain.repository.ActivitiesRepository
-import com.grace.eva.domain.usecase.ActivitiesExportUseCase
-import com.grace.eva.domain.usecase.ActivityRemoveUseCase
-import com.grace.eva.domain.usecase.ActivitiesGetUseCase
-import com.grace.eva.domain.usecase.ActivityNewUseCase
-import com.grace.eva.domain.usecase.ActivitiesSaveUseCase
-import com.grace.eva.domain.usecase.ActivityUpdateUseCase
+import com.grace.eva.data.repository.TrackerRepositoryImpl
+import com.grace.eva.domain.repository.TrackerRepository
+import com.grace.eva.domain.usecase.activity.CreateActivityUseCase
+import com.grace.eva.domain.usecase.activity.RemoveActivityUseCase
+import com.grace.eva.domain.usecase.activity.UpdateActivityUseCase
+import com.grace.eva.domain.usecase.sync.ExportSaveUseCase
+import com.grace.eva.domain.usecase.save.CreateSaveUseCase
+import com.grace.eva.domain.usecase.save.DeleteSaveUseCase
+import com.grace.eva.domain.usecase.save.GetAllSavesUseCase
+import com.grace.eva.domain.usecase.save.GetCurrentSaveUseCase
+import com.grace.eva.domain.usecase.save.SetCurrentSaveUseCase
+import com.grace.eva.domain.usecase.save.UpdateSaveUseCase
+import com.grace.eva.domain.usecase.sync.ImportSaveUseCase
 
-class IosAppContainer() : AppContainer {
-    private val activitiesRepository: ActivitiesRepository =
-        ActivitiesRepositoryImpl()
+class IosAppContainer : AppContainer {
 
-    override val activitiesGetUseCase: ActivitiesGetUseCase =
-        ActivitiesGetUseCase(activitiesRepository)
-    override val activityNewUseCase: ActivityNewUseCase =
-        ActivityNewUseCase(activitiesRepository)
-    override val activityRemoveUseCase: ActivityRemoveUseCase =
-        ActivityRemoveUseCase(activitiesRepository)
-    override val activitiesSaveUseCase: ActivitiesSaveUseCase =
-        ActivitiesSaveUseCase(activitiesRepository)
-    override val activityUpdateUseCase: ActivityUpdateUseCase =
-        ActivityUpdateUseCase(activitiesRepository)
-    override val activitiesExportUseCase: ActivitiesExportUseCase =
-        ActivitiesExportUseCase(activitiesRepository)
+    override val trackerRepository: TrackerRepository = TrackerRepositoryImpl()
+
+    // Save UseCases
+    override val getAllSavesUseCase: GetAllSavesUseCase = GetAllSavesUseCase(trackerRepository)
+    override val getCurrentSaveUseCase: GetCurrentSaveUseCase = GetCurrentSaveUseCase(trackerRepository)
+    override val setCurrentSaveUseCase: SetCurrentSaveUseCase = SetCurrentSaveUseCase(trackerRepository)
+    override val createSaveUseCase: CreateSaveUseCase = CreateSaveUseCase(trackerRepository)
+    override val deleteSaveUseCase: DeleteSaveUseCase = DeleteSaveUseCase(trackerRepository)
+    override val updateSaveUseCase: UpdateSaveUseCase = UpdateSaveUseCase(trackerRepository)
+
+    // Activity UseCases
+    override val createActivityUseCase: CreateActivityUseCase = CreateActivityUseCase(trackerRepository)
+    override val removeActivityUseCase: RemoveActivityUseCase = RemoveActivityUseCase(trackerRepository)
+    override val updateActivityUseCase: UpdateActivityUseCase = UpdateActivityUseCase(trackerRepository)
+
+    // Export
+    override val exportSaveUseCase: ExportSaveUseCase = ExportSaveUseCase(trackerRepository)
+    override val importSaveUseCase: ImportSaveUseCase = ImportSaveUseCase(trackerRepository)
 }
 
 actual fun createAppContainer(): AppContainer = IosAppContainer()

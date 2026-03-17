@@ -27,6 +27,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.grace.eva.di.MockAppContainer
+import com.grace.eva.di.MockType
+import com.grace.eva.presentation.viewmodel.TrackerViewModel
 import com.grace.eva.utils.formatDuration
 import kotlinx.coroutines.delay
 import kotlin.time.Clock
@@ -35,6 +38,7 @@ import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.runtime.collectAsState
 import com.grace.eva.utils.formatTime
 import kotlin.time.Instant
 
@@ -66,9 +70,7 @@ fun ActivityEmptyCard() {
 @Composable
 fun ActivityCard(
     activity: Activity?,
-    nextActivityBegin: Instant?,
-    onActivityChange: (Activity) -> Unit,
-    onActivityDelete: (Activity) -> Unit,
+    viewModel: TrackerViewModel,
     expanded: Boolean = false
 ) {
     if (activity == null) {
@@ -78,12 +80,16 @@ fun ActivityCard(
     var expanded by remember { mutableStateOf(expanded) }
     var editedName by remember(activity.name) { mutableStateOf(activity.name) }
     var editedNote by remember(activity.note) { mutableStateOf(activity.note) }
-    var editedBegin by remember(activity.begin) { mutableStateOf(activity.begin) }
 
     var currentTime by remember { mutableStateOf(Clock.System.now()) }
 
-    LaunchedEffect(nextActivityBegin) {
-        if (nextActivityBegin == null) {
+    val state by viewModel.uiState.collectAsState()
+    val isSaveCompleted = viewModel.isCurrentSaveCompleted()
+    val endTime = viewModel.getActivityEndTime(activity) ?: currentTime
+    val isActive = !isSaveCompleted && viewModel.getActivityEndTime(activity) == null
+
+    LaunchedEffect(isActive) {
+        if (isActive) {
             while (true) {
                 currentTime = Clock.System.now()
                 delay(1000L)
@@ -91,8 +97,7 @@ fun ActivityCard(
         }
     }
 
-    val duration = remember(activity.begin, nextActivityBegin, currentTime) {
-        val endTime = nextActivityBegin ?: currentTime
+    val duration = remember(activity.begin, endTime, currentTime) {
         formatDuration(endTime - activity.begin)
     }
 
@@ -102,7 +107,7 @@ fun ActivityCard(
             .clickable { expanded = !expanded },
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (nextActivityBegin == null)
+            containerColor = if (isActive)
                 MaterialTheme.colorScheme.primaryContainer
             else
                 MaterialTheme.colorScheme.surfaceContainerLow
@@ -168,20 +173,11 @@ fun ActivityCard(
                 ActivityCardControls(
                     editedName = editedName,
                     editedNote = editedNote,
-                    editedBegin = editedBegin,
+                    editedBegin = activity.begin,
+                    activity = activity,
+                    viewModel = viewModel,
                     onNameChange = { editedName = it },
-                    onNoteChange = { editedNote = it },
-                    onSave = {
-                        onActivityChange(
-                            activity.copy(
-                                name = editedName,
-                                note = editedNote
-                            )
-                        )
-                    },
-                    onDelete = {
-                        onActivityDelete(activity)
-                    }
+                    onNoteChange = { editedNote = it }
                 )
             }
         }
@@ -193,20 +189,20 @@ fun ActivityCardControls(
     editedName: String,
     editedNote: String,
     editedBegin: Instant,
+    activity: Activity,
+    viewModel: TrackerViewModel,
     onNameChange: (String) -> Unit,
-    onNoteChange: (String) -> Unit,
-    onSave: () -> Unit,
-    onDelete: () -> Unit
+    onNoteChange: (String) -> Unit
 ) {
     Spacer(modifier = Modifier.height(16.dp))
 
     OutlinedTextField(
         value = formatTime(editedBegin),
-        onValueChange = onNoteChange,
+        onValueChange = { /* TODO: Make editable */ },
         label = { Text("Начало") },
         modifier = Modifier.fillMaxWidth(),
         singleLine = true,
-        enabled = false // TODO: Make editable
+        enabled = false
     )
 
     Spacer(modifier = Modifier.height(8.dp))
@@ -236,7 +232,7 @@ fun ActivityCardControls(
         modifier = Modifier.fillMaxWidth()
     ) {
         OutlinedButton(
-            onClick = onDelete,
+            onClick = { viewModel.onRemoveActivity(activity) },
             modifier = Modifier.weight(1f),
             border = BorderStroke(
                 width = 1.dp,
@@ -247,7 +243,14 @@ fun ActivityCardControls(
         }
 
         Button(
-            onClick = onSave,
+            onClick = {
+                viewModel.onUpdateActivity(
+                    activity.copy(
+                        name = editedName,
+                        note = editedNote
+                    )
+                )
+            },
             modifier = Modifier.weight(1f)
         ) {
             Text("Сохранить")
@@ -258,29 +261,39 @@ fun ActivityCardControls(
 @Preview
 @Composable
 fun PreviewActivityCard() {
-    val name = "Сон"
-    val begin = Clock.System.now() - 666.seconds
-    val activity = Activity(name, "", begin)
-    ActivityCard(activity, null, {}, {})
+    val mockViewModel = remember {
+        TrackerViewModel(appContainer = MockAppContainer(MockType.SIMPLE))
+    }
+    val activity = mockViewModel.uiState.value.currentSave?.activities?.firstOrNull()
+    ActivityCard(activity, mockViewModel)
 }
 
 @Preview
 @Composable
 fun PreviewActivityCardExpanded() {
-    val name = "И ещё что-то"
-    val note = "Здоровый сон"
-    val begin = Clock.System.now() - 42.seconds
-    val activity = Activity(name, note, begin)
-    ActivityCard(activity, null, {}, {}, true)
+    val mockViewModel = remember {
+        TrackerViewModel(appContainer = MockAppContainer(MockType.SIMPLE))
+    }
+    val activity = mockViewModel.uiState.value.currentSave?.activities?.firstOrNull()
+    ActivityCard(activity, mockViewModel, expanded = true)
 }
 
 @Preview
 @Composable
 fun PreviewListActivityCardExpanded() {
-    val name = "И ещё что-то"
-    val note = "Нездоровый сон"
-    val begin = Clock.System.now() - 3.hours - 42.minutes - 16.seconds
-    val activity = Activity(name, note, begin)
-    val nextBegin = Clock.System.now() - 2.hours
-    ActivityCard(activity, nextBegin, {}, {}, true)
+    val mockViewModel = remember {
+        TrackerViewModel(appContainer = MockAppContainer(MockType.LARGE))
+    }
+    val activities = mockViewModel.uiState.value.currentSave?.activities ?: emptyList()
+    ActivityCard(activities.firstOrNull(), mockViewModel, expanded = true)
+}
+
+@Preview
+@Composable
+fun PreviewActivityCard_Completed() {
+    val mockViewModel = remember {
+        TrackerViewModel(appContainer = MockAppContainer(MockType.SIMPLE))
+    }
+    val activity = mockViewModel.uiState.value.currentSave?.activities?.firstOrNull()
+    ActivityCard(activity, mockViewModel)
 }
