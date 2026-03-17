@@ -5,12 +5,11 @@ import com.grace.eva.domain.model.Activity
 import com.grace.eva.domain.repository.ActivitiesRepository
 import com.grace.eva.domain.repository.MockActivitiesRepository
 import com.grace.eva.domain.usecase.ActivitiesExportUseCase
-import com.grace.eva.domain.usecase.AddNoteToLastActivityUseCase
-import com.grace.eva.domain.usecase.DeleteActivityUseCase
-import com.grace.eva.domain.usecase.GetActivitiesUseCase
-import com.grace.eva.domain.usecase.NewActivityUseCase
-import com.grace.eva.domain.usecase.SaveActivitiesUseCase
-import com.grace.eva.domain.usecase.UpdateActivityUseCase
+import com.grace.eva.domain.usecase.ActivityRemoveUseCase
+import com.grace.eva.domain.usecase.ActivitiesGetUseCase
+import com.grace.eva.domain.usecase.ActivityNewUseCase
+import com.grace.eva.domain.usecase.ActivitiesSaveUseCase
+import com.grace.eva.domain.usecase.ActivityUpdateUseCase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlin.time.Clock
@@ -72,27 +71,23 @@ class MockAppContainer(
     private inner class MockUseCase(private val repo: ActivitiesRepository) {
         @Suppress("UNCHECKED_CAST")
         inline fun <reified T> asUseCase(): T = when (T::class) {
-            GetActivitiesUseCase::class -> object : GetActivitiesUseCase(repo) {
+            ActivitiesGetUseCase::class -> object : ActivitiesGetUseCase(repo) {
                 override fun invoke(): Flow<Activities> = flowOf(mockActivities)
             } as T
 
-            NewActivityUseCase::class -> object : NewActivityUseCase(repo) {
+            ActivityNewUseCase::class -> object : ActivityNewUseCase(repo) {
                 override suspend fun invoke(name: String, note: String) {}
             } as T
 
-            DeleteActivityUseCase::class -> object : DeleteActivityUseCase(repo) {
+            ActivityRemoveUseCase::class -> object : ActivityRemoveUseCase(repo) {
                 override suspend fun invoke(activity: Activity) {}
             } as T
 
-            AddNoteToLastActivityUseCase::class -> object : AddNoteToLastActivityUseCase(repo) {
-                override suspend fun invoke(note: String) {}
-            } as T
-
-            SaveActivitiesUseCase::class -> object : SaveActivitiesUseCase(repo) {
+            ActivitiesSaveUseCase::class -> object : ActivitiesSaveUseCase(repo) {
                 override suspend fun invoke() {}
             } as T
 
-            UpdateActivityUseCase::class -> object : UpdateActivityUseCase(repo) {
+            ActivityUpdateUseCase::class -> object : ActivityUpdateUseCase(repo) {
                 override suspend fun invoke(activity: Activity) {}
             } as T
 
@@ -106,12 +101,10 @@ class MockAppContainer(
 
     private val mockUseCase = MockUseCase(mockRepo)
 
-    override val getActivitiesUseCase: GetActivitiesUseCase = mockUseCase.asUseCase()
-    override val newActivityUseCase: NewActivityUseCase = mockUseCase.asUseCase()
-    override val deleteActivityUseCase: DeleteActivityUseCase = mockUseCase.asUseCase()
-    override val addNoteToLastActivityUseCase: AddNoteToLastActivityUseCase =
-        mockUseCase.asUseCase()
-    override val saveActivitiesUseCase: SaveActivitiesUseCase = mockUseCase.asUseCase()
-    override val updateActivityUseCase: UpdateActivityUseCase = mockUseCase.asUseCase()
+    override val activitiesGetUseCase: ActivitiesGetUseCase = mockUseCase.asUseCase()
+    override val activityNewUseCase: ActivityNewUseCase = mockUseCase.asUseCase()
+    override val activityRemoveUseCase: ActivityRemoveUseCase = mockUseCase.asUseCase()
+    override val activitiesSaveUseCase: ActivitiesSaveUseCase = mockUseCase.asUseCase()
+    override val activityUpdateUseCase: ActivityUpdateUseCase = mockUseCase.asUseCase()
     override val activitiesExportUseCase: ActivitiesExportUseCase = mockUseCase.asUseCase()
 }

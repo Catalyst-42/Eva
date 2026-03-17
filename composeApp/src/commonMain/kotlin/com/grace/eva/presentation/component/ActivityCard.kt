@@ -178,11 +178,9 @@ fun ActivityCard(
                                 note = editedNote
                             )
                         )
-                        expanded = false
                     },
                     onDelete = {
                         onActivityDelete(activity)
-                        expanded = false
                     }
                 )
             }

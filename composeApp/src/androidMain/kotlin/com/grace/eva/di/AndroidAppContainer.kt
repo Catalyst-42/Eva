@@ -4,12 +4,11 @@ import android.content.Context
 import com.grace.eva.data.repository.ActivitiesRepositoryImpl
 import com.grace.eva.domain.repository.ActivitiesRepository
 import com.grace.eva.domain.usecase.ActivitiesExportUseCase
-import com.grace.eva.domain.usecase.AddNoteToLastActivityUseCase
-import com.grace.eva.domain.usecase.DeleteActivityUseCase
-import com.grace.eva.domain.usecase.GetActivitiesUseCase
-import com.grace.eva.domain.usecase.NewActivityUseCase
-import com.grace.eva.domain.usecase.SaveActivitiesUseCase
-import com.grace.eva.domain.usecase.UpdateActivityUseCase
+import com.grace.eva.domain.usecase.ActivityRemoveUseCase
+import com.grace.eva.domain.usecase.ActivitiesGetUseCase
+import com.grace.eva.domain.usecase.ActivityNewUseCase
+import com.grace.eva.domain.usecase.ActivitiesSaveUseCase
+import com.grace.eva.domain.usecase.ActivityUpdateUseCase
 
 /**
  * DI class
@@ -21,12 +20,11 @@ class AndroidAppContainer(context: Context): AppContainer {
     private val activitiesRepository: ActivitiesRepository = ActivitiesRepositoryImpl(context)
 
     // Use cases
-    override val getActivitiesUseCase: GetActivitiesUseCase = GetActivitiesUseCase(activitiesRepository)
-    override val newActivityUseCase: NewActivityUseCase = NewActivityUseCase(activitiesRepository)
-    override val deleteActivityUseCase: DeleteActivityUseCase = DeleteActivityUseCase(activitiesRepository)
-    override val addNoteToLastActivityUseCase: AddNoteToLastActivityUseCase = AddNoteToLastActivityUseCase(activitiesRepository)
-    override val saveActivitiesUseCase: SaveActivitiesUseCase = SaveActivitiesUseCase(activitiesRepository)
-    override val updateActivityUseCase: UpdateActivityUseCase = UpdateActivityUseCase(activitiesRepository)
+    override val activitiesGetUseCase: ActivitiesGetUseCase = ActivitiesGetUseCase(activitiesRepository)
+    override val activityNewUseCase: ActivityNewUseCase = ActivityNewUseCase(activitiesRepository)
+    override val activityRemoveUseCase: ActivityRemoveUseCase = ActivityRemoveUseCase(activitiesRepository)
+    override val activitiesSaveUseCase: ActivitiesSaveUseCase = ActivitiesSaveUseCase(activitiesRepository)
+    override val activityUpdateUseCase: ActivityUpdateUseCase = ActivityUpdateUseCase(activitiesRepository)
     override val activitiesExportUseCase: ActivitiesExportUseCase = ActivitiesExportUseCase(activitiesRepository)
 }
 

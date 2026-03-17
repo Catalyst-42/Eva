@@ -30,26 +30,12 @@ import androidx.compose.ui.unit.dp
 import com.grace.eva.di.MockAppContainer
 import com.grace.eva.di.MockType
 import com.grace.eva.domain.model.Activities
-import com.grace.eva.domain.model.Activity
-import com.grace.eva.domain.repository.ActivitiesRepository
-import com.grace.eva.domain.repository.MockActivitiesRepository
-import com.grace.eva.domain.usecase.ActivitiesExportUseCase
-import com.grace.eva.domain.usecase.AddNoteToLastActivityUseCase
-import com.grace.eva.domain.usecase.DeleteActivityUseCase
-import com.grace.eva.domain.usecase.GetActivitiesUseCase
-import com.grace.eva.domain.usecase.NewActivityUseCase
-import com.grace.eva.domain.usecase.SaveActivitiesUseCase
-import com.grace.eva.domain.usecase.UpdateActivityUseCase
 import com.grace.eva.presentation.viewmodel.TrackerViewModel
 import com.grace.eva.utils.formatDuration
 import com.grace.eva.utils.formatTime
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
 import kotlin.time.Clock.System.now
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.hours
-import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
 @Composable

@@ -1,20 +1,18 @@
 package com.grace.eva.di
 
 import com.grace.eva.domain.usecase.ActivitiesExportUseCase
-import com.grace.eva.domain.usecase.AddNoteToLastActivityUseCase
-import com.grace.eva.domain.usecase.DeleteActivityUseCase
-import com.grace.eva.domain.usecase.GetActivitiesUseCase
-import com.grace.eva.domain.usecase.NewActivityUseCase
-import com.grace.eva.domain.usecase.SaveActivitiesUseCase
-import com.grace.eva.domain.usecase.UpdateActivityUseCase
+import com.grace.eva.domain.usecase.ActivityRemoveUseCase
+import com.grace.eva.domain.usecase.ActivitiesGetUseCase
+import com.grace.eva.domain.usecase.ActivityNewUseCase
+import com.grace.eva.domain.usecase.ActivitiesSaveUseCase
+import com.grace.eva.domain.usecase.ActivityUpdateUseCase
 
 interface AppContainer {
-    val getActivitiesUseCase: GetActivitiesUseCase
-    val newActivityUseCase: NewActivityUseCase
-    val deleteActivityUseCase: DeleteActivityUseCase
-    val addNoteToLastActivityUseCase: AddNoteToLastActivityUseCase
-    val saveActivitiesUseCase: SaveActivitiesUseCase
-    val updateActivityUseCase: UpdateActivityUseCase
+    val activitiesGetUseCase: ActivitiesGetUseCase
+    val activityNewUseCase: ActivityNewUseCase
+    val activityRemoveUseCase: ActivityRemoveUseCase
+    val activitiesSaveUseCase: ActivitiesSaveUseCase
+    val activityUpdateUseCase: ActivityUpdateUseCase
     val activitiesExportUseCase: ActivitiesExportUseCase
 }
 

@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.serialization.json.Json
 import java.io.File
-import kotlin.time.Clock
 
 class ActivitiesRepositoryImpl(
     val context: Context
@@ -34,10 +33,10 @@ class ActivitiesRepositoryImpl(
     }
 
     init {
-        loadActivities()
+        activitiesLoad()
     }
 
-    override fun loadActivities() {
+    override fun activitiesLoad() {
         if (!activitiesFile.exists()) {
             Log.d("Save", "File are empty")
             // Use default empty activities
@@ -50,18 +49,18 @@ class ActivitiesRepositoryImpl(
         Log.d("Save", jsonString)
     }
 
-    override fun saveActivities() {
+    override fun activitiesSave() {
         val jsonString = json.encodeToString(activities.value)
         Log.d("Save", jsonString)
 
         activitiesFile.writeText(jsonString)
     }
 
-    override fun getActivities(): Flow<Activities> {
+    override fun activitiesGet(): Flow<Activities> {
         return activities.asStateFlow()
     }
 
-    override fun newActivity(name: String, note: String) {
+    override fun activityNew(name: String, note: String) {
         // Create new activity
         val newActivity = Activity(name, note)
         val newList = activities.value.activities.toMutableList()
@@ -72,18 +71,10 @@ class ActivitiesRepositoryImpl(
             activities = newList
         )
 
-        saveActivities()
+        activitiesSave()
     }
 
-    override fun addNote(note: String) {
-        if (activities.value.activities.isNotEmpty()) {
-            activities.value.activities.last().note = note
-        }
-
-        saveActivities()
-    }
-
-    override fun deleteActivity(activity: Activity) {
+    override fun activityRemove(activity: Activity) {
         activities.update { currentActivities ->
             val newList = currentActivities.activities
                 .filter { it.id != activity.id }
@@ -92,10 +83,10 @@ class ActivitiesRepositoryImpl(
             currentActivities.copy(activities = newList)
         }
 
-        saveActivities()
+        activitiesSave()
     }
 
-    override fun updateActivity(activity: Activity) {
+    override fun activityUpdate(activity: Activity) {
         activities.update { currentActivities ->
             val newList = currentActivities.activities
                 .mapTo(mutableListOf()) { if (it.id == activity.id) activity else it }
@@ -104,10 +95,14 @@ class ActivitiesRepositoryImpl(
 
         }
 
-        saveActivities()
+        activitiesSave()
     }
 
-    override suspend fun exportActivities(activities: Activities) {
+    override suspend fun activitiesExport(activities: Activities) {
         // TODO: Implement, please
+    }
+
+    override suspend fun activitiesRename(name: String) {
+        TODO("Not yet implemented")
     }
 }

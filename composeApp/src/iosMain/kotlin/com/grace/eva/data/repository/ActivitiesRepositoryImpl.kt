@@ -14,11 +14,9 @@ import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSUserDomainMask
 import platform.Foundation.NSURL
 import platform.Foundation.writeToFile
-import kotlin.time.Clock
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
-import kotlinx.cinterop.refTo
 import kotlinx.cinterop.usePinned
 import kotlinx.coroutines.suspendCancellableCoroutine
 import platform.Foundation.NSFileManager
@@ -38,7 +36,7 @@ class ActivitiesRepositoryImpl : ActivitiesRepository {
     private val json = Json { prettyPrint = true; ignoreUnknownKeys = true }
 
     init {
-        loadActivities()
+        activitiesLoad()
     }
 
     // Returns the path to the documents directory
@@ -80,7 +78,7 @@ class ActivitiesRepositoryImpl : ActivitiesRepository {
         }
     }
 
-    override fun loadActivities() {
+    override fun activitiesLoad() {
         val filePath = getSaveFilePath() ?: return
         val jsonString = readFromFile(filePath)
 
@@ -93,15 +91,15 @@ class ActivitiesRepositoryImpl : ActivitiesRepository {
         }
     }
 
-    override fun saveActivities() {
+    override fun activitiesSave() {
         val filePath = getSaveFilePath() ?: return
         val jsonString = json.encodeToString(activities.value)
         writeToFile(jsonString, filePath)
     }
 
-    override fun getActivities(): Flow<Activities> = activities.asStateFlow()
+    override fun activitiesGet(): Flow<Activities> = activities.asStateFlow()
 
-    override fun newActivity(name: String, note: String) {
+    override fun activityNew(name: String, note: String) {
         // Create and add new activity
         val newActivity = Activity(name, note)
         activities.update { current ->
@@ -110,7 +108,7 @@ class ActivitiesRepositoryImpl : ActivitiesRepository {
             current.copy(activities = newList)
         }
 
-        saveActivities()
+        activitiesSave()
     }
 
     override fun addNote(note: String) {
@@ -119,31 +117,31 @@ class ActivitiesRepositoryImpl : ActivitiesRepository {
             newList.lastOrNull()?.note = note
             current.copy(activities = newList)
         }
-        saveActivities()
+        activitiesSave()
     }
 
-    override fun deleteActivity(activity: Activity) {
+    override fun activityRemove(activity: Activity) {
         activities.update { current ->
             val newList = current.activities
                 .filter { it.id != activity.id }
                 .toMutableList()
             current.copy(activities = newList)
         }
-        saveActivities()
+        activitiesSave()
     }
 
-    override fun updateActivity(activity: Activity) {
+    override fun activityUpdate(activity: Activity) {
         activities.update { current ->
             val newList = current.activities
                 .map { if (it.id == activity.id) activity else it }
                 .toMutableList()
             current.copy(activities = newList)
         }
-        saveActivities()
+        activitiesSave()
     }
 
     @OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
-    override suspend fun exportActivities(activities: Activities) {
+    override suspend fun activitiesExport(activities: Activities) {
         suspendCancellableCoroutine<Unit> { continuation ->
             try {
                 val documentsPath = NSSearchPathForDirectoriesInDomains(
@@ -186,6 +184,10 @@ class ActivitiesRepositoryImpl : ActivitiesRepository {
                 continuation.resumeWithException(e)
             }
         }
+    }
+
+    override suspend fun activitiesRename(name: String) {
+        TODO("Not yet implemented")
     }
 
     private fun getTopViewController(controller: UIViewController?): UIViewController? {

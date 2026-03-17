@@ -7,6 +7,6 @@ open class ActivitiesExportUseCase(
     private val repository: ActivitiesRepository
 ) {
     open suspend operator fun invoke(activities: Activities) {
-        repository.exportActivities(activities)
+        repository.activitiesExport(activities)
     }
 }

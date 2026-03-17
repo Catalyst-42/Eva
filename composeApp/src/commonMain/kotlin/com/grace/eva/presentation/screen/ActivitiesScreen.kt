@@ -40,7 +40,6 @@ fun ActivitiesScreen(
 
     ActivityScreenContent(viewModel)
 }
-
 @Composable
 fun ActivityScreenContent(viewModel: TrackerViewModel) {
     val state by viewModel.uiState.collectAsState()
@@ -52,8 +51,14 @@ fun ActivityScreenContent(viewModel: TrackerViewModel) {
 
     val focusManager = LocalFocusManager.current
 
+    // Get all activities sorted chronologically for time calculation context
+    val allActivitiesSorted = remember(activities) {
+        activities.sortedByDescending { it.begin }
+    }
+
+    // Filter activities based on search query
     val filteredActivities = remember(searchQuery, activities) {
-        if (searchQuery.isBlank()) {
+        val filtered = if (searchQuery.isBlank()) {
             activities
         } else {
             activities.filter { activity ->
@@ -61,7 +66,8 @@ fun ActivityScreenContent(viewModel: TrackerViewModel) {
                         activity.note.contains(searchQuery, ignoreCase = true)
             }
         }
-    }.sortedByDescending { it.begin } // Sort by begin time descending (most recent first)
+        filtered.sortedByDescending { it.begin }
+    }
 
     fun scrollToTop() {
         scope.launch {
@@ -179,15 +185,15 @@ fun ActivityScreenContent(viewModel: TrackerViewModel) {
                     items = filteredActivities,
                     key = { activity -> "${activity.id}-${activity.begin}" }
                 ) { activity ->
-                    // Find the next activity (the one that started after this one)
-                    val currentIndex = filteredActivities.indexOf(activity)
-                    val nextActivityBegin = if (currentIndex > 0) {
+                    // Find next activity in chronological order from ALL activities,
+                    // not just filtered ones, to maintain correct time display
+                    val currentIndexInAll = allActivitiesSorted.indexOf(activity)
+                    val nextActivityBegin = if (currentIndexInAll > 0) {
                         // Since we're sorted descending, the next activity in chronological order
                         // is actually the previous item in the list
-                        filteredActivities[currentIndex - 1].begin
+                        allActivitiesSorted[currentIndexInAll - 1].begin
                     } else {
-                        // This is the most recent activity (first in the list)
-                        null
+                        null // This is the most recent activity
                     }
 
                     ActivityCard(

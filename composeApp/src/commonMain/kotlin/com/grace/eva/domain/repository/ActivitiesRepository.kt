@@ -6,12 +6,12 @@ import kotlinx.coroutines.flow.Flow
 
 // See implementations in ***Impl classes
 interface ActivitiesRepository {
-    fun getActivities(): Flow<Activities>
-    fun loadActivities()
-    fun saveActivities()
-    fun newActivity(name: String, note: String = "")
-    fun addNote(note: String)
-    fun deleteActivity(activity: Activity)
-    fun updateActivity(activity: Activity)
-    suspend fun exportActivities(activities: Activities)
+    fun activitiesLoad()
+    fun activitiesGet(): Flow<Activities>
+    fun activitiesSave()
+    fun activityNew(name: String, note: String = "")
+    fun activityRemove(activity: Activity)
+    fun activityUpdate(activity: Activity)
+    suspend fun activitiesExport(activities: Activities)
+    suspend fun activitiesRename(name: String)
 }

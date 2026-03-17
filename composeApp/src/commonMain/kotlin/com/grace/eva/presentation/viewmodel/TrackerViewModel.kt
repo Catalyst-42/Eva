@@ -26,7 +26,7 @@ class TrackerViewModel(
 
     init {
         viewModelScope.launch {
-            appContainer.getActivitiesUseCase().collect { activities ->
+            appContainer.activitiesGetUseCase().collect { activities ->
                 _uiState.update {
                     it.copy(activities = activities)
                 }
@@ -36,31 +36,25 @@ class TrackerViewModel(
 
     fun onNewActivity(name: String, note: String = "") {
         viewModelScope.launch {
-            appContainer.newActivityUseCase(name, note)
+            appContainer.activityNewUseCase(name, note)
         }
     }
 
     fun onDeleteActivity(activity: Activity) {
         viewModelScope.launch {
-            appContainer.deleteActivityUseCase(activity)
-        }
-    }
-
-    fun onAddNoteToLastActivityUseCase(note: String) {
-        viewModelScope.launch {
-            appContainer.addNoteToLastActivityUseCase(note)
+            appContainer.activityRemoveUseCase(activity)
         }
     }
 
     fun onSaveActivities() {
         viewModelScope.launch {
-            appContainer.saveActivitiesUseCase()
+            appContainer.activitiesSaveUseCase()
         }
     }
 
     fun onUpdateActivity(activity: Activity) {
         viewModelScope.launch {
-            appContainer.updateActivityUseCase(activity)
+            appContainer.activityUpdateUseCase(activity)
         }
     }
 
