@@ -77,12 +77,10 @@ fun SettingsScreenContent(
                 )
             }
         } else {
-            // Список сохранений
             allSaves.forEach { save ->
                 SaveCard(
                     save = save,
                     viewModel = viewModel,
-                    expanded = save.id == currentSave?.id
                 )
                 Spacer(modifier = Modifier.height(8.dp))
             }

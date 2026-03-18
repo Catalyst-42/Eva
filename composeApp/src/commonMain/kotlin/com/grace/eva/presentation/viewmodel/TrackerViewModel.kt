@@ -5,8 +5,9 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.grace.eva.di.AppContainer
-import com.grace.eva.domain.model.Save
 import com.grace.eva.domain.model.Activity
+import com.grace.eva.domain.model.Save
+import com.grace.eva.utils.formatTime
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,10 +19,14 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 
 data class TrackerUiState(
-    val allSaves: List<Save> = emptyList(),
-    val currentSave: Save? = null,
+    val allSaves: List<Save> = emptyList(), val currentSave: Save? = null,
     val isLoading: Boolean = false
 )
+
+sealed class ValidationResult {
+    object Success : ValidationResult()
+    data class Error(val message: String) : ValidationResult()
+}
 
 class TrackerViewModel(
     private val appContainer: AppContainer
@@ -33,12 +38,10 @@ class TrackerViewModel(
     init {
         viewModelScope.launch {
             combine(
-                appContainer.getAllSavesUseCase(),
-                appContainer.getCurrentSaveUseCase()
+                appContainer.getAllSavesUseCase(), appContainer.getCurrentSaveUseCase()
             ) { allSaves, currentSave ->
                 TrackerUiState(
-                    allSaves = allSaves,
-                    currentSave = currentSave
+                    allSaves = allSaves, currentSave = currentSave
                 )
             }.collect { state ->
                 _uiState.value = state
@@ -88,11 +91,21 @@ class TrackerViewModel(
         }
     }
 
-    fun onUpdateSaveEnd(save: Save, end: Instant?) {
-        val currentSave = _uiState.value.currentSave ?: return
+    fun onUpdateSaveEndWithCallback(
+        save: Save, newEnd: Instant?, onError: (String) -> Unit, onSuccess: () -> Unit
+    ) {
         viewModelScope.launch {
-            val updatedSave = currentSave.copy(end = end)
-            appContainer.updateSaveUseCase(updatedSave)
+            when (val result = validateSaveEnd(save, newEnd)) {
+                is ValidationResult.Success -> {
+                    val updatedSave = save.copy(end = newEnd)
+                    appContainer.updateSaveUseCase(updatedSave)
+                    onSuccess()
+                }
+
+                is ValidationResult.Error -> {
+                    onError(result.message)
+                }
+            }
         }
     }
 
@@ -109,9 +122,21 @@ class TrackerViewModel(
         }
     }
 
-    fun onUpdateActivity(activity: Activity) {
+    fun onUpdateActivityBeginWithCallback(
+        activity: Activity, newBegin: Instant, onError: (String) -> Unit, onSuccess: () -> Unit
+    ) {
         viewModelScope.launch {
-            appContainer.updateActivityUseCase(activity)
+            when (val result = validateActivityBegin(activity, newBegin)) {
+                is ValidationResult.Success -> {
+                    val updatedActivity = activity.copy(begin = newBegin)
+                    appContainer.updateActivityUseCase(updatedActivity)
+                    onSuccess()
+                }
+
+                is ValidationResult.Error -> {
+                    onError(result.message)
+                }
+            }
         }
     }
 
@@ -129,13 +154,6 @@ class TrackerViewModel(
         }
     }
 
-    fun onUpdateActivityBegin(activity: Activity, newBegin: Instant) {
-        viewModelScope.launch {
-            val updatedActivity = activity.copy(begin = newBegin)
-            appContainer.updateActivityUseCase(updatedActivity)
-        }
-    }
-
     // Sync logic
     fun onExportSave(save: Save) {
         viewModelScope.launch {
@@ -149,11 +167,44 @@ class TrackerViewModel(
         }
     }
 
-    // Utility methods
-    fun getSaveById(id: String): Save? {
-        return _uiState.value.allSaves.find { it.id == id }
+    // Validation
+    fun validateActivityBegin(activity: Activity, newBegin: Instant): ValidationResult {
+        val currentSave =
+            _uiState.value.currentSave ?: return ValidationResult.Error("No active save")
+        val activities = currentSave.activities.sortedBy { it.begin }
+        val index = activities.indexOfFirst { it.id == activity.id }
+
+        // Check against previous activity
+        if (index > 0) {
+            val previousActivity = activities[index - 1]
+            if (newBegin <= previousActivity.begin) {
+                return ValidationResult.Error("Должно быть позже ${formatTime(previousActivity.begin)}")
+            }
+        }
+
+        // Check against next activity
+        if (index < activities.lastIndex) {
+            val nextActivity = activities[index + 1]
+            if (newBegin >= nextActivity.begin) {
+                return ValidationResult.Error("Должно быть раньше ${formatTime(nextActivity.begin)}")
+            }
+        }
+
+        return ValidationResult.Success
     }
 
+    fun validateSaveEnd(save: Save, newEnd: Instant?): ValidationResult {
+        if (newEnd == null) return ValidationResult.Success
+
+        val lastActivity = save.activities.maxByOrNull { it.begin }
+        if (lastActivity != null && newEnd <= lastActivity.begin) {
+            return ValidationResult.Error("Должно быть позже ${formatTime(lastActivity.begin)}")
+        }
+
+        return ValidationResult.Success
+    }
+
+    // Utility methods
     fun getActivityEndTime(activity: Activity): Instant? {
         val currentSave = _uiState.value.currentSave ?: return null
         val activities = currentSave.activities.sortedBy { it.begin }
@@ -174,15 +225,12 @@ class TrackerViewModel(
     class Factory(
         private val appContainer: AppContainer
     ) : ViewModelProvider.Factory {
-        // This one is for KMM with KClass
         fun <T : ViewModel> create(modelClass: KClass<T>): T {
             return TrackerViewModel(appContainer) as T
         }
 
-        // Sometimes also need this one with key
         override fun <T : ViewModel> create(
-            modelClass: KClass<T>,
-            extras: CreationExtras
+            modelClass: KClass<T>, extras: CreationExtras
         ): T {
             return TrackerViewModel(appContainer) as T
         }

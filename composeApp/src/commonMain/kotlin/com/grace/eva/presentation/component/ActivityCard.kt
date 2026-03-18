@@ -40,6 +40,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.collectAsState
 import com.grace.eva.utils.formatTime
+import com.grace.eva.utils.parseInstant
 import kotlin.time.Instant
 
 @Composable
@@ -78,15 +79,24 @@ fun ActivityCard(
     }
 
     var expanded by remember { mutableStateOf(expanded) }
-    var editedName by remember(activity.name) { mutableStateOf(activity.name) }
-    var editedNote by remember(activity.note) { mutableStateOf(activity.note) }
-
     var currentTime by remember { mutableStateOf(Clock.System.now()) }
 
     val state by viewModel.uiState.collectAsState()
     val isSaveCompleted = viewModel.isCurrentSaveCompleted()
-    val endTime = viewModel.getActivityEndTime(activity) ?: currentTime
-    val isActive = !isSaveCompleted && viewModel.getActivityEndTime(activity) == null
+
+    // Get fresh activity from state to ensure UI updates when data changes
+    val currentActivity = state.currentSave?.activities?.find { it.id == activity.id } ?: activity
+
+    // Local state for editable fields
+    var editedName by remember(currentActivity.id, currentActivity.name) {
+        mutableStateOf(currentActivity.name)
+    }
+    var editedNote by remember(currentActivity.id, currentActivity.note) {
+        mutableStateOf(currentActivity.note)
+    }
+
+    val endTime = viewModel.getActivityEndTime(currentActivity) ?: currentTime
+    val isActive = !isSaveCompleted && viewModel.getActivityEndTime(currentActivity) == null
 
     LaunchedEffect(isActive) {
         if (isActive) {
@@ -97,8 +107,8 @@ fun ActivityCard(
         }
     }
 
-    val duration = remember(activity.begin, endTime, currentTime) {
-        formatDuration(endTime - activity.begin)
+    val duration = remember(currentActivity.begin, endTime, currentTime) {
+        formatDuration(endTime - currentActivity.begin)
     }
 
     Card(
@@ -131,13 +141,13 @@ fun ActivityCard(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = activity.name,
+                            text = currentActivity.name,
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurface
                         )
 
                         Text(
-                            text = formatTime(activity.begin, "dd.mm HH:MM:SS"),
+                            text = formatTime(currentActivity.begin, "dd.mm HH:MM:SS"),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -150,7 +160,7 @@ fun ActivityCard(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = activity.note,
+                            text = currentActivity.note,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             overflow = TextOverflow.Ellipsis,
@@ -173,8 +183,8 @@ fun ActivityCard(
                 ActivityCardControls(
                     editedName = editedName,
                     editedNote = editedNote,
-                    editedBegin = activity.begin,
-                    activity = activity,
+                    editedBegin = currentActivity.begin,
+                    activity = currentActivity,
                     viewModel = viewModel,
                     onNameChange = { editedName = it },
                     onNoteChange = { editedNote = it }
@@ -194,16 +204,32 @@ fun ActivityCardControls(
     onNameChange: (String) -> Unit,
     onNoteChange: (String) -> Unit
 ) {
+    var beginText by remember(editedBegin) { mutableStateOf(formatTime(editedBegin)) }
+    var formatError by remember { mutableStateOf(false) }
+    var validationError by remember { mutableStateOf<String?>(null) }
+
     Spacer(modifier = Modifier.height(16.dp))
 
-    OutlinedTextField(
-        value = formatTime(editedBegin),
-        onValueChange = { /* TODO: Make editable */ },
-        label = { Text("Начало") },
-        modifier = Modifier.fillMaxWidth(),
-        singleLine = true,
-        enabled = false
-    )
+    Column {
+        OutlinedTextField(
+            value = beginText,
+            onValueChange = {
+                beginText = it
+            },
+            label = { Text("Начало") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            isError = formatError || validationError != null,
+            supportingText = if (formatError || validationError != null) {
+                {
+                    when {
+                        formatError -> Text("Неверный формат: дд.мм.гггг ЧЧ:ММ:СС")
+                        else -> Text(validationError!!)
+                    }
+                }
+            } else null
+        )
+    }
 
     Spacer(modifier = Modifier.height(8.dp))
 
@@ -244,12 +270,39 @@ fun ActivityCardControls(
 
         Button(
             onClick = {
-                viewModel.onUpdateActivity(
-                    activity.copy(
-                        name = editedName,
-                        note = editedNote
+                // Update name if changed
+                if (editedName != activity.name) {
+                    viewModel.onRenameActivity(activity, editedName)
+                }
+
+                // Update note if changed
+                if (editedNote != activity.note) {
+                    viewModel.onUpdateActivityNote(activity, editedNote)
+                }
+
+                // Parse and validate begin time
+                val newBegin = parseInstant(beginText)
+                if (newBegin == null) {
+                    formatError = true
+
+                    return@Button
+                } else {
+                    formatError = false
+                    validationError = null
+                }
+
+                if (newBegin != activity.begin) {
+                    viewModel.onUpdateActivityBeginWithCallback(
+                        activity = activity,
+                        newBegin = newBegin,
+                        onError = { errorMessage ->
+                            validationError = errorMessage
+                        },
+                        onSuccess = {
+                            validationError = null
+                        }
                     )
-                )
+                }
             },
             modifier = Modifier.weight(1f)
         ) {

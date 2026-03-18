@@ -36,6 +36,8 @@ import platform.UIKit.UIDocumentPickerViewController
 import platform.darwin.NSObject
 import platform.UIKit.UIDocumentPickerDelegateProtocol
 import kotlin.time.Clock
+import platform.UIKit.UIImpactFeedbackGenerator
+import platform.UIKit.UIImpactFeedbackStyle
 
 private const val TRACKER_CONFIG_FILE = "tracker.json"
 private const val SAVES_DIRECTORY = "saves"
@@ -53,6 +55,12 @@ class TrackerRepositoryImpl : TrackerRepository {
 
     init {
         loadTrackerData()
+    }
+
+    private fun triggerHaptic() {
+        val generator = UIImpactFeedbackGenerator(UIImpactFeedbackStyle.UIImpactFeedbackStyleSoft)
+        generator.prepare()
+        generator.impactOccurred()
     }
 
     @OptIn(ExperimentalForeignApi::class)
@@ -101,6 +109,7 @@ class TrackerRepositoryImpl : TrackerRepository {
                 NSData.create(bytes = address, length = bytes.size.toULong())
             }
         }
+        triggerHaptic()
         return data.writeToFile(filePath, true)
     }
 

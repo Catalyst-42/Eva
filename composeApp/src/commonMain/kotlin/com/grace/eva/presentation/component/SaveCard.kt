@@ -34,6 +34,7 @@ import com.grace.eva.domain.model.Save
 import com.grace.eva.presentation.viewmodel.TrackerViewModel
 import com.grace.eva.utils.formatDuration
 import com.grace.eva.utils.formatTime
+import com.grace.eva.utils.parseInstant
 import kotlinx.coroutines.delay
 import kotlin.time.Clock.System.now
 import kotlin.time.Duration
@@ -159,9 +160,13 @@ fun SaveCardControls(
     viewModel: TrackerViewModel,
 ) {
     var localEditedEnd by remember(editedEnd) { mutableStateOf(editedEnd) }
+    var endText by remember(editedEnd) { mutableStateOf(editedEnd?.let { formatTime(it) } ?: "") }
+    var formatError by remember { mutableStateOf(false) }
+    var validationError by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(editedEnd) {
         localEditedEnd = editedEnd
+        endText = editedEnd?.let { formatTime(it) } ?: ""
     }
 
     val state by viewModel.uiState.collectAsState()
@@ -179,16 +184,27 @@ fun SaveCardControls(
             singleLine = true
         )
 
-        OutlinedTextField(
-            value = localEditedEnd?.let { formatTime(it) } ?: "Нет",
-            onValueChange = {
-                // TODO: Implement date picker
-            },
-            label = { Text("Завершено") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            enabled = save.end != null,
-        )
+        Column {
+            OutlinedTextField(
+                value = endText,
+                onValueChange = {
+                    endText = it
+                },
+                label = { Text("Завершено") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                isError = formatError || validationError != null,
+                enabled = save.end != null,
+                supportingText = if (formatError || validationError != null) {
+                    {
+                        when {
+                            formatError -> Text("Неверный формат: дд.мм.гггг ЧЧ:ММ:СС")
+                            else -> Text(validationError!!)
+                        }
+                    }
+                } else null
+            )
+        }
     }
 
     Spacer(modifier = Modifier.height(16.dp))
@@ -251,9 +267,50 @@ fun SaveCardControls(
 
         Button(
             onClick = {
-                viewModel.onRenameSave(save, editedName)
-                if (localEditedEnd != save.end) {
-                    viewModel.onUpdateSaveEnd(save, localEditedEnd)
+                // Update name if changed
+                if (editedName != save.name) {
+                    viewModel.onRenameSave(save, editedName)
+                }
+
+                // Parse and validate end time
+                if (endText.isNotBlank()) {
+                    val newEnd = parseInstant(endText)
+                    if (newEnd == null) {
+                        formatError = true
+                        return@Button
+                    } else {
+                        formatError = false
+                        validationError = null
+                    }
+
+                    if (newEnd != save.end) {
+                        viewModel.onUpdateSaveEndWithCallback(
+                            save = save,
+                            newEnd = newEnd,
+                            onError = { errorMessage ->
+                                validationError = errorMessage
+                            },
+                            onSuccess = {
+                                validationError = null
+                                onEndChange(newEnd)
+                            }
+                        )
+                    }
+                } else {
+                    // Empty field means no end time (active save)
+                    if (save.end != null) {
+                        viewModel.onUpdateSaveEndWithCallback(
+                            save = save,
+                            newEnd = null,
+                            onError = { errorMessage ->
+                                validationError = errorMessage
+                            },
+                            onSuccess = {
+                                validationError = null
+                                onEndChange(null)
+                            }
+                        )
+                    }
                 }
             },
             modifier = Modifier.weight(1f)

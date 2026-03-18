@@ -1,6 +1,7 @@
 package com.grace.eva.data.repository
 
 import android.content.Context
+import android.util.Log
 import com.grace.eva.domain.model.Save
 import com.grace.eva.domain.model.Activity
 import com.grace.eva.domain.repository.TrackerRepository
@@ -16,7 +17,7 @@ private const val SAVES_DIRECTORY = "saves"
 
 @Serializable
 data class TrackerMeta(
-    val saves: List<String> = emptyList(), // список ID сохранений
+    val saves: List<String> = emptyList(),
     val currentSaveId: String? = null
 )
 
@@ -115,7 +116,7 @@ class TrackerRepositoryImpl(
 
     override suspend fun createSave(name: String): Save {
         val newSave = Save(name = name)
-        _allSaves.value = _allSaves.value + newSave
+        _allSaves.value += newSave
         _currentSave.value = newSave
 
         saveSaveToFile(newSave)
