@@ -82,11 +82,9 @@ fun SettingsScreenContent(
                     save = save,
                     viewModel = viewModel,
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
 
         Button(
             onClick = {

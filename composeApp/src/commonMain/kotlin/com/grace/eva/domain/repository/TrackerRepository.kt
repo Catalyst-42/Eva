@@ -2,6 +2,7 @@ package com.grace.eva.domain.repository
 
 import com.grace.eva.domain.model.Save
 import com.grace.eva.domain.model.Activity
+import com.grace.eva.domain.model.ActivityTemplate
 import kotlinx.coroutines.flow.Flow
 
 // See implementations in *Impl classes
@@ -17,6 +18,11 @@ interface TrackerRepository {
     suspend fun addActivity(name: String)
     suspend fun removeActivity(activity: Activity)
     suspend fun updateActivity(activity: Activity)
+
+    suspend fun addActivityTemplate(name: String, color: String)
+    suspend fun removeActivityTemplate(template: ActivityTemplate)
+    suspend fun updateActivityTemplate(template: ActivityTemplate)
+    suspend fun getActivityTemplates(): Flow<List<ActivityTemplate>>
 
     suspend fun exportSave(save: Save)
     suspend fun importSave()

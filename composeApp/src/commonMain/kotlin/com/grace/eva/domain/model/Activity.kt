@@ -7,6 +7,7 @@ import kotlin.time.Instant
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
+@ConsistentCopyVisibility
 @Serializable
 data class Activity private constructor(
     var name: String,

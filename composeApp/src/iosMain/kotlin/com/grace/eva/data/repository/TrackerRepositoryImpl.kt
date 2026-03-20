@@ -2,10 +2,12 @@ package com.grace.eva.data.repository
 
 import com.grace.eva.domain.model.Save
 import com.grace.eva.domain.model.Activity
+import com.grace.eva.domain.model.ActivityTemplate
 import com.grace.eva.domain.repository.TrackerRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import platform.Foundation.NSData
@@ -19,6 +21,7 @@ import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.usePinned
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import platform.Foundation.NSFileManager
@@ -191,7 +194,7 @@ class TrackerRepositoryImpl : TrackerRepository {
 
     override suspend fun createSave(name: String): Save {
         val newSave = Save(name = name)
-        _allSaves.value += newSave
+        _allSaves.update { it + newSave }
         _currentSave.value = newSave
 
         saveSaveToFile(newSave)
@@ -201,7 +204,7 @@ class TrackerRepositoryImpl : TrackerRepository {
     }
 
     override suspend fun deleteSave(save: Save) {
-        _allSaves.value = _allSaves.value.filter { it.id != save.id }
+        _allSaves.update { it.filter { it.id != save.id } }
         if (_currentSave.value?.id == save.id) {
             _currentSave.value = _allSaves.value.firstOrNull()
         }
@@ -211,7 +214,12 @@ class TrackerRepositoryImpl : TrackerRepository {
     }
 
     override suspend fun updateSave(save: Save) {
-        _allSaves.value = _allSaves.value.map { if (it.id == save.id) save else it }
+        // Обновляем список сохранений
+        _allSaves.update { saves ->
+            saves.map { if (it.id == save.id) save else it }
+        }
+
+        // Обновляем текущее сохранение, если это оно
         if (_currentSave.value?.id == save.id) {
             _currentSave.value = save
         }
@@ -240,26 +248,60 @@ class TrackerRepositoryImpl : TrackerRepository {
     override suspend fun updateActivity(activity: Activity) {
         val current = _currentSave.value ?: return
         val updatedSave = current.copy(
-            activities = current.activities.map { if (it.id == activity.id) activity else it }.toMutableList()
+            activities = current.activities.map {
+                if (it.id == activity.id) activity else it
+            }.toMutableList()
         )
         updateSave(updatedSave)
     }
 
+    // ActivityTemplate
+    override suspend fun addActivityTemplate(name: String, color: String) {
+        val current = _currentSave.value ?: return
+        val newTemplate = ActivityTemplate(name = name, color = color)
+        val updatedSave = current.copy(
+            activityTemplates = (current.activityTemplates + newTemplate).toMutableList()
+        )
+        updateSave(updatedSave)
+    }
+
+    override suspend fun removeActivityTemplate(template: ActivityTemplate) {
+        val current = _currentSave.value ?: return
+        val updatedSave = current.copy(
+            activityTemplates = current.activityTemplates.filter { it.id != template.id }.toMutableList()
+        )
+        updateSave(updatedSave)
+    }
+
+    override suspend fun updateActivityTemplate(template: ActivityTemplate) {
+        val current = _currentSave.value ?: return
+        val updatedSave = current.copy(
+            activityTemplates = current.activityTemplates.map {
+                if (it.id == template.id) template else it
+            }.toMutableList()
+        )
+        updateSave(updatedSave)
+    }
+
+    override suspend fun getActivityTemplates(): Flow<List<ActivityTemplate>> {
+        return _currentSave.asStateFlow().map { save ->
+            save?.activityTemplates ?: emptyList()
+        }
+    }
+
+    // Sync (остается без изменений)
     @OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
     override suspend fun exportSave(save: Save) {
         suspendCancellableCoroutine<Unit> { continuation ->
             try {
-                // Ensure the save file exists
                 val saveFilePath = getSaveFilePath(save.id)
                 if (saveFilePath == null) {
                     continuation.resumeWithException(Exception("Could not get save file path"))
                     return@suspendCancellableCoroutine
                 }
 
-                // Check if file exists
                 val fileManager = NSFileManager.defaultManager
                 if (!fileManager.fileExistsAtPath(saveFilePath)) {
-                    // Create temp file for export if it doesn't exist
                     val jsonString = json.encodeToString(save)
                     writeToFile(jsonString, saveFilePath)
                 }
@@ -344,13 +386,12 @@ class TrackerRepositoryImpl : TrackerRepository {
 
                                 val saveToAdd = newSave.copy(name = finalName)
 
-                                // Launch coroutine for suspend functions
                                 @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
                                 GlobalScope.launch {
                                     try {
                                         ensureSavesDirectoryExists()
                                         saveSaveToFile(saveToAdd)
-                                        _allSaves.value += saveToAdd
+                                        _allSaves.update { it + saveToAdd }
                                         saveTrackerMeta()
                                         continuation.resume(Unit)
                                     } catch (e: Exception) {

@@ -5,6 +5,10 @@ import com.grace.eva.domain.repository.TrackerRepository
 import com.grace.eva.domain.usecase.activity.CreateActivityUseCase
 import com.grace.eva.domain.usecase.activity.RemoveActivityUseCase
 import com.grace.eva.domain.usecase.activity.UpdateActivityUseCase
+import com.grace.eva.domain.usecase.activity.template.AddActivityTemplateUseCase
+import com.grace.eva.domain.usecase.activity.template.GetActivityTemplatesUseCase
+import com.grace.eva.domain.usecase.activity.template.RemoveActivityTemplateUseCase
+import com.grace.eva.domain.usecase.activity.template.UpdateActivityTemplateUseCase
 import com.grace.eva.domain.usecase.sync.ExportSaveUseCase
 import com.grace.eva.domain.usecase.save.CreateSaveUseCase
 import com.grace.eva.domain.usecase.save.DeleteSaveUseCase
@@ -15,7 +19,6 @@ import com.grace.eva.domain.usecase.save.UpdateSaveUseCase
 import com.grace.eva.domain.usecase.sync.ImportSaveUseCase
 
 class IosAppContainer : AppContainer {
-
     override val trackerRepository: TrackerRepository = TrackerRepositoryImpl()
 
     // Save UseCases
@@ -30,6 +33,12 @@ class IosAppContainer : AppContainer {
     override val createActivityUseCase: CreateActivityUseCase = CreateActivityUseCase(trackerRepository)
     override val removeActivityUseCase: RemoveActivityUseCase = RemoveActivityUseCase(trackerRepository)
     override val updateActivityUseCase: UpdateActivityUseCase = UpdateActivityUseCase(trackerRepository)
+
+    // ActivityTemplate UseCases
+    override val addActivityTemplateUseCase: AddActivityTemplateUseCase = AddActivityTemplateUseCase(trackerRepository)
+    override val removeActivityTemplateUseCase: RemoveActivityTemplateUseCase = RemoveActivityTemplateUseCase(trackerRepository)
+    override val updateActivityTemplateUseCase: UpdateActivityTemplateUseCase = UpdateActivityTemplateUseCase(trackerRepository)
+    override val getActivityTemplatesUseCase: GetActivityTemplatesUseCase = GetActivityTemplatesUseCase(trackerRepository)
 
     // Export
     override val exportSaveUseCase: ExportSaveUseCase = ExportSaveUseCase(trackerRepository)

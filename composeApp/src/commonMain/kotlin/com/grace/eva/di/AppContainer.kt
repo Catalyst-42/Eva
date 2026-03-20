@@ -4,6 +4,10 @@ import com.grace.eva.domain.repository.TrackerRepository
 import com.grace.eva.domain.usecase.activity.CreateActivityUseCase
 import com.grace.eva.domain.usecase.activity.RemoveActivityUseCase
 import com.grace.eva.domain.usecase.activity.UpdateActivityUseCase
+import com.grace.eva.domain.usecase.activity.template.AddActivityTemplateUseCase
+import com.grace.eva.domain.usecase.activity.template.GetActivityTemplatesUseCase
+import com.grace.eva.domain.usecase.activity.template.RemoveActivityTemplateUseCase
+import com.grace.eva.domain.usecase.activity.template.UpdateActivityTemplateUseCase
 import com.grace.eva.domain.usecase.sync.ExportSaveUseCase
 import com.grace.eva.domain.usecase.save.CreateSaveUseCase
 import com.grace.eva.domain.usecase.save.DeleteSaveUseCase
@@ -28,6 +32,12 @@ interface AppContainer {
     val createActivityUseCase: CreateActivityUseCase
     val removeActivityUseCase: RemoveActivityUseCase
     val updateActivityUseCase: UpdateActivityUseCase
+
+    // ActivityTemplate UseCases
+    val addActivityTemplateUseCase: AddActivityTemplateUseCase
+    val removeActivityTemplateUseCase: RemoveActivityTemplateUseCase
+    val updateActivityTemplateUseCase: UpdateActivityTemplateUseCase
+    val getActivityTemplatesUseCase: GetActivityTemplatesUseCase
 
     // Sync
     val exportSaveUseCase: ExportSaveUseCase

@@ -4,10 +4,14 @@ import android.content.Context
 import android.util.Log
 import com.grace.eva.domain.model.Save
 import com.grace.eva.domain.model.Activity
+import com.grace.eva.domain.model.ActivityTemplate
 import com.grace.eva.domain.repository.TrackerRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.File
@@ -116,7 +120,8 @@ class TrackerRepositoryImpl(
 
     override suspend fun createSave(name: String): Save {
         val newSave = Save(name = name)
-        _allSaves.value += newSave
+        // Используем update вместо прямого присваивания
+        _allSaves.update { it + newSave }
         _currentSave.value = newSave
 
         saveSaveToFile(newSave)
@@ -126,7 +131,8 @@ class TrackerRepositoryImpl(
     }
 
     override suspend fun deleteSave(save: Save) {
-        _allSaves.value = _allSaves.value.filter { it.id != save.id }
+        // Используем update вместо прямого присваивания
+        _allSaves.update { it.filter { saved -> saved.id != save.id } }
         if (_currentSave.value?.id == save.id) {
             _currentSave.value = _allSaves.value.firstOrNull()
         }
@@ -136,7 +142,12 @@ class TrackerRepositoryImpl(
     }
 
     override suspend fun updateSave(save: Save) {
-        _allSaves.value = _allSaves.value.map { if (it.id == save.id) save else it }
+        // Используем update вместо прямого присваивания
+        _allSaves.update { saves ->
+            saves.map { if (it.id == save.id) save else it }
+        }
+
+        // Обновляем текущее сохранение, если это оно
         if (_currentSave.value?.id == save.id) {
             _currentSave.value = save
         }
@@ -170,8 +181,41 @@ class TrackerRepositoryImpl(
         updateSave(updatedSave)
     }
 
+    override suspend fun addActivityTemplate(name: String, color: String) {
+        val current = _currentSave.value ?: return
+        val newTemplate = ActivityTemplate(name = name, color = color)
+        val updatedSave = current.copy(
+            activityTemplates = (current.activityTemplates + newTemplate).toMutableList()
+        )
+        updateSave(updatedSave)
+    }
+
+    override suspend fun removeActivityTemplate(template: ActivityTemplate) {
+        val current = _currentSave.value ?: return
+        val updatedSave = current.copy(
+            activityTemplates = current.activityTemplates.filter { it.id != template.id }.toMutableList()
+        )
+        updateSave(updatedSave)
+    }
+
+    override suspend fun updateActivityTemplate(template: ActivityTemplate) {
+        val current = _currentSave.value ?: return
+        val updatedSave = current.copy(
+            activityTemplates = current.activityTemplates.map {
+                if (it.id == template.id) template else it
+            }.toMutableList()
+        )
+        updateSave(updatedSave)
+    }
+
+    override suspend fun getActivityTemplates(): Flow<List<ActivityTemplate>> {
+        return _currentSave.asStateFlow().map { save ->
+            save?.activityTemplates ?: emptyList()
+        }
+    }
+
     override suspend fun exportSave(save: Save) {
-        // TODO: Implement share functionality
+        // TODO: Implement
     }
 
     override suspend fun importSave() {

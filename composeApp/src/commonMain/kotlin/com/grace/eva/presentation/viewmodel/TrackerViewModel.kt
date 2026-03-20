@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.grace.eva.di.AppContainer
 import com.grace.eva.domain.model.Activity
+import com.grace.eva.domain.model.ActivityTemplate
 import com.grace.eva.domain.model.Save
 import com.grace.eva.utils.formatTime
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,7 +20,9 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 
 data class TrackerUiState(
-    val allSaves: List<Save> = emptyList(), val currentSave: Save? = null,
+    val allSaves: List<Save> = emptyList(),
+    val currentSave: Save? = null,
+    val activityTemplates: List<ActivityTemplate> = emptyList(),
     val isLoading: Boolean = false
 )
 
@@ -35,16 +38,24 @@ class TrackerViewModel(
     private val _uiState = MutableStateFlow(TrackerUiState())
     val uiState: StateFlow<TrackerUiState> = _uiState.asStateFlow()
 
+    private val _currentActivity = MutableStateFlow<Activity?>(null)
+    val currentActivity: StateFlow<Activity?> = _currentActivity.asStateFlow()
+
     init {
         viewModelScope.launch {
             combine(
-                appContainer.getAllSavesUseCase(), appContainer.getCurrentSaveUseCase()
-            ) { allSaves, currentSave ->
+                appContainer.getAllSavesUseCase(),
+                appContainer.getCurrentSaveUseCase(),
+                appContainer.getActivityTemplatesUseCase()
+            ) { allSaves: List<Save>, currentSave: Save?, templates: List<ActivityTemplate> ->
                 TrackerUiState(
-                    allSaves = allSaves, currentSave = currentSave
+                    allSaves = allSaves,
+                    currentSave = currentSave,
+                    activityTemplates = templates
                 )
             }.collect { state ->
                 _uiState.value = state
+                _currentActivity.value = state.currentSave?.activities?.lastOrNull()
             }
         }
     }
@@ -101,7 +112,6 @@ class TrackerViewModel(
                     appContainer.updateSaveUseCase(updatedSave)
                     onSuccess()
                 }
-
                 is ValidationResult.Error -> {
                     onError(result.message)
                 }
@@ -109,10 +119,31 @@ class TrackerViewModel(
         }
     }
 
-    // Activity logic
-    fun onCreateActivity(name: String) {
+    // Activity logic - единый метод обновления
+    fun onUpdateActivity(
+        activity: Activity,
+        newName: String,
+        newNote: String,
+        newBegin: Instant,
+        onError: (String) -> Unit,
+        onSuccess: () -> Unit
+    ) {
         viewModelScope.launch {
-            appContainer.createActivityUseCase(name)
+            when (val result = validateActivityBegin(activity, newBegin)) {
+                is ValidationResult.Error -> {
+                    onError(result.message)
+                    return@launch
+                }
+                is ValidationResult.Success -> {
+                    val updatedActivity = activity.copy(
+                        name = newName,
+                        note = newNote,
+                        begin = newBegin
+                    )
+                    appContainer.updateActivityUseCase(updatedActivity)
+                    onSuccess()
+                }
+            }
         }
     }
 
@@ -122,36 +153,40 @@ class TrackerViewModel(
         }
     }
 
-    fun onUpdateActivityBeginWithCallback(
-        activity: Activity, newBegin: Instant, onError: (String) -> Unit, onSuccess: () -> Unit
-    ) {
+    fun onCreateActivity(name: String) {
         viewModelScope.launch {
-            when (val result = validateActivityBegin(activity, newBegin)) {
-                is ValidationResult.Success -> {
-                    val updatedActivity = activity.copy(begin = newBegin)
-                    appContainer.updateActivityUseCase(updatedActivity)
-                    onSuccess()
-                }
-
-                is ValidationResult.Error -> {
-                    onError(result.message)
-                }
-            }
+            appContainer.createActivityUseCase(name)
         }
     }
 
-    fun onRenameActivity(activity: Activity, newName: String) {
-        viewModelScope.launch {
-            val updatedActivity = activity.copy(name = newName)
-            appContainer.updateActivityUseCase(updatedActivity)
+    fun onActivityTemplateSelected(template: ActivityTemplate) {
+        if (_uiState.value.currentSave?.end == null) {
+            onCreateActivity(template.name)
         }
     }
 
-    fun onUpdateActivityNote(activity: Activity, newNote: String) {
+    // Template logic
+    fun onAddActivityTemplate(name: String, color: String = "#2196F3") {
         viewModelScope.launch {
-            val updatedActivity = activity.copy(note = newNote)
-            appContainer.updateActivityUseCase(updatedActivity)
+            appContainer.addActivityTemplateUseCase(name, color)
         }
+    }
+
+    fun onRemoveActivityTemplate(template: ActivityTemplate) {
+        viewModelScope.launch {
+            appContainer.removeActivityTemplateUseCase(template)
+        }
+    }
+
+    fun onUpdateActivityTemplate(template: ActivityTemplate, newName: String, newColor: String) {
+        viewModelScope.launch {
+            val updatedTemplate = template.copy(name = newName, color = newColor)
+            appContainer.updateActivityTemplateUseCase(updatedTemplate)
+        }
+    }
+
+    fun onRenameActivityTemplate(template: ActivityTemplate, newName: String) {
+        onUpdateActivityTemplate(template, newName, template.color)
     }
 
     // Sync logic
@@ -169,12 +204,10 @@ class TrackerViewModel(
 
     // Validation
     fun validateActivityBegin(activity: Activity, newBegin: Instant): ValidationResult {
-        val currentSave =
-            _uiState.value.currentSave ?: return ValidationResult.Error("No active save")
+        val currentSave = _uiState.value.currentSave ?: return ValidationResult.Error("No active save")
         val activities = currentSave.activities.sortedBy { it.begin }
         val index = activities.indexOfFirst { it.id == activity.id }
 
-        // Check against previous activity
         if (index > 0) {
             val previousActivity = activities[index - 1]
             if (newBegin <= previousActivity.begin) {
@@ -182,7 +215,6 @@ class TrackerViewModel(
             }
         }
 
-        // Check against next activity
         if (index < activities.lastIndex) {
             val nextActivity = activities[index + 1]
             if (newBegin >= nextActivity.begin) {

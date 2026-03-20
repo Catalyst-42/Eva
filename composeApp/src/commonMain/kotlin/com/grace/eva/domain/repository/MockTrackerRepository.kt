@@ -2,6 +2,7 @@ package com.grace.eva.domain.repository
 
 import com.grace.eva.domain.model.Save
 import com.grace.eva.domain.model.Activity
+import com.grace.eva.domain.model.ActivityTemplate
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 
@@ -17,6 +18,11 @@ class MockTrackerRepository : TrackerRepository {
     override suspend fun addActivity(name: String) {}
     override suspend fun removeActivity(activity: Activity) {}
     override suspend fun updateActivity(activity: Activity) {}
+
+    override suspend fun addActivityTemplate(name: String, color: String) { }
+    override suspend fun removeActivityTemplate(template: ActivityTemplate) { }
+    override suspend fun updateActivityTemplate(template: ActivityTemplate) { }
+    override suspend fun getActivityTemplates(): Flow<List<ActivityTemplate>> = flowOf(emptyList())
 
     override suspend fun exportSave(save: Save) {}
     override suspend fun importSave() {}
