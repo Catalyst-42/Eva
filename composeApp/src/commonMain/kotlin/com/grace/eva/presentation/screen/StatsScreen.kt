@@ -1,33 +1,28 @@
 package com.grace.eva.presentation.screen
 
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.grace.eva.di.AppContainer
 import com.grace.eva.di.MockAppContainer
 import com.grace.eva.di.MockType
+import com.grace.eva.presentation.screen.components.*
 import com.grace.eva.presentation.viewmodel.TrackerViewModel
-import com.grace.eva.utils.formatDuration
-import com.grace.eva.utils.formatFloat
+import com.grace.eva.ui.theme.tracker.TemplateColors
+import com.grace.eva.utils.parseColor
 import kotlinx.coroutines.delay
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
+
+// Default fallback color if parsing fails
+private val DEFAULT_FALLBACK_COLOR = Color(0xFF2196F3)
 
 @Composable
 fun StatsScreen(
@@ -45,6 +40,16 @@ fun StatsScreenContent(viewModel: TrackerViewModel) {
     val currentSave = state.currentSave
     val activities = currentSave?.activities ?: emptyList()
     val isSaveCompleted = currentSave?.end != null
+    val templates = state.activityTemplates
+
+    // Create mapping of activity names to colors from templates
+    val activityColors = remember(templates) {
+        templates.mapNotNull { template ->
+            parseColor(template.color)?.let { color ->
+                template.name to color
+            }
+        }.toMap()
+    }
 
     var currentTime by remember { mutableStateOf(Clock.System.now()) }
 
@@ -96,252 +101,121 @@ fun StatsScreenContent(viewModel: TrackerViewModel) {
         activityStats.sumOf { it.second.second }
     }
 
-    Column(
+    // Helper function to get color for activity
+    fun getColorForActivity(name: String, index: Int = 0): Color {
+        // First try to get color from template
+        activityColors[name]?.let { return it }
+
+        // If not found, try to parse default color from TemplateColors
+        parseColor(TemplateColors.getColorForIndex(index))?.let { return it }
+
+        // If all fails, return default fallback color
+        return DEFAULT_FALLBACK_COLOR
+    }
+
+    // Prepare chart data for bar chart
+    val chartData = remember(activityStats, activityColors) {
+        activityStats.mapIndexed { index, (name, stats) ->
+            val (duration, _) = stats
+            ChartSegment(
+                name = name,
+                duration = duration,
+                color = getColorForActivity(name, index)
+            )
+        }
+    }
+
+    // Prepare legend items
+    val legendItems = remember(activityStats, totalDuration, activityColors) {
+        activityStats.mapIndexed { index, (name, stats) ->
+            val (duration, count) = stats
+            LegendItem(
+                name = name,
+                duration = duration,
+                count = count,
+                totalDuration = totalDuration,
+                color = getColorForActivity(name, index)
+            )
+        }
+    }
+
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         if (currentSave == null) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Text(
-                    text = "Нет активного сохранения",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        } else if (activityStats.isEmpty()) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Text(
-                    text = "Нет данных для отображения",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        } else {
-
-            Text(
-                text = "Плотность этапов",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-
-            // Horizontal bar chart with total stats below
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp)
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
                 ) {
-                    // Bar chart
-                    val lineColor = MaterialTheme.colorScheme.surface
-                    val borderColor = MaterialTheme.colorScheme.outlineVariant
-
-                    Canvas(
+                    Text(
+                        text = "Нет активного сохранения",
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(32.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(MaterialTheme.colorScheme.surface)
-                    ) {
-                        val barWidth = size.width
-                        var startX = 0f
-
-                        activityStats.forEachIndexed { index, (_, stats) ->
-                            val weight = stats.first.inWholeSeconds.toFloat() / totalDuration.inWholeSeconds.toFloat()
-                            val segmentWidth = barWidth * weight
-
-                            drawRect(
-                                color = chartColors[index % chartColors.size],
-                                topLeft = Offset(startX, 0f),
-                                size = androidx.compose.ui.geometry.Size(segmentWidth, size.height)
-                            )
-
-                            if (index < activityStats.lastIndex) {
-                                drawLine(
-                                    color = lineColor,
-                                    start = Offset(startX + segmentWidth, 0f),
-                                    end = Offset(startX + segmentWidth, size.height),
-                                    strokeWidth = 4.dp.toPx()
-                                )
-                            }
-
-                            startX += segmentWidth
-                        }
-
-                        drawRect(
-                            color = borderColor,
-                            size = size,
-                            style = Stroke(width = 1.dp.toPx())
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Всего этапов: $totalActivities",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-
-                        Text(
-                            text = formatDuration(totalDuration),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
+                            .padding(24.dp),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
+        } else if (activityStats.isEmpty()) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Text(
+                        text = "Нет данных для отображения",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        } else {
+            item {
+                Text(
+                    text = "Легенда",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            item {
+                LegendTable(
+                    items = legendItems,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
 
-            Text(
-                text = "Легенда",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
+            item {
+                Text(
+                    text = "Плотность этапов",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
 
-            activityStats.forEach { (name, stats) ->
-                val (duration, count) = stats
-                StatsLegendCard(
-                    name = name,
-                    duration = duration,
-                    count = count,
-                    totalDuration = totalDuration,
-                    color = chartColors[activityStats.indexOfFirst { it.first == name } % chartColors.size],
-                    modifier = Modifier.padding(bottom = 16.dp)
+            item {
+                ActivitiesBarChart(
+                    data = chartData,
+                    totalActivities = totalActivities,
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }
     }
 }
-
-@Composable
-fun StatsLegendCard(
-    name: String,
-    duration: Duration,
-    count: Int,
-    totalDuration: Duration,
-    color: Color,
-    modifier: Modifier = Modifier
-) {
-    val percentage = formatFloat(
-        duration.inWholeSeconds * 100f / totalDuration.inWholeSeconds,
-        2
-    )
-
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Card(
-                modifier = Modifier.size(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = color
-                ),
-                shape = MaterialTheme.shapes.small
-            ) {}
-
-            Spacer(modifier = Modifier.size(14.dp))
-
-            Column(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = name,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    Text(
-                        text = "$percentage%",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Этапов: $count",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Text(
-                        text = formatDuration(duration),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
-    }
-}
-
-private val chartColors = listOf(
-    Color(0xFF2196F3), // Blue
-    Color(0xFFFF9800), // Orange
-    Color(0xFFF44336), // Red
-    Color(0xFF9C27B0), // Purple
-    Color(0xFF4CAF50), // Green
-    Color(0xFF00BCD4), // Cyan
-    Color(0xFFFFC107), // Amber
-    Color(0xFF3F51B5), // Indigo
-    Color(0xFFE91E63), // Pink
-    Color(0xFF009688)  // Teal
-)
 
 @Preview(showBackground = true)
 @Composable

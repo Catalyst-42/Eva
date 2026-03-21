@@ -189,6 +189,7 @@ class TrackerRepositoryImpl : TrackerRepository {
 
     override suspend fun setCurrentSave(save: Save) {
         _currentSave.value = save
+        triggerHaptic()
         saveTrackerMeta()
     }
 
@@ -214,12 +215,10 @@ class TrackerRepositoryImpl : TrackerRepository {
     }
 
     override suspend fun updateSave(save: Save) {
-        // Обновляем список сохранений
         _allSaves.update { saves ->
             saves.map { if (it.id == save.id) save else it }
         }
 
-        // Обновляем текущее сохранение, если это оно
         if (_currentSave.value?.id == save.id) {
             _currentSave.value = save
         }
@@ -289,7 +288,7 @@ class TrackerRepositoryImpl : TrackerRepository {
         }
     }
 
-    // Sync (остается без изменений)
+    // Sync
     @OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
     override suspend fun exportSave(save: Save) {
         suspendCancellableCoroutine<Unit> { continuation ->

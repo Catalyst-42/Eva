@@ -50,7 +50,6 @@ fun ActivityCard(
     }
 
     var isExpanded by remember { mutableStateOf(expanded) }
-    var currentTime by remember { mutableStateOf(Clock.System.now()) }
     var editedName by remember(activity.id) { mutableStateOf(activity.name) }
     var editedNote by remember(activity.id) { mutableStateOf(activity.note) }
 
@@ -62,26 +61,6 @@ fun ActivityCard(
     LaunchedEffect(activity.id, activity.name, activity.note) {
         editedName = activity.name
         editedNote = activity.note
-    }
-
-    LaunchedEffect(isActivityActive) {
-        if (isActivityActive) {
-            while (true) {
-                delay(1000L)
-                currentTime = Clock.System.now()
-            }
-        }
-    }
-
-    // Get activity end time: start of next activity or save end time
-    val activityEndTime = if (isActivityActive) {
-        currentTime
-    } else {
-        viewModel.getActivityEndTime(activity) ?: currentSave?.end ?: currentTime
-    }
-
-    val duration = remember(activity.begin, activityEndTime) {
-        formatDuration(activityEndTime - activity.begin)
     }
 
     Card(
@@ -116,7 +95,7 @@ fun ActivityCard(
                 )
 
                 Text(
-                    text = formatTime(activity.begin, "dd.MM HH:MM:SS"),
+                    text = formatTime(activity.begin, "dd.mm HH:MM:SS"),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -137,10 +116,12 @@ fun ActivityCard(
                     modifier = Modifier.weight(1f)
                 )
 
-                Text(
-                    text = duration,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                // Isolated duration text that updates independently
+                ActivityDurationText(
+                    activity = activity,
+                    isActivityActive = isActivityActive,
+                    viewModel = viewModel,
+                    currentSave = currentSave
                 )
             }
 
@@ -158,6 +139,43 @@ fun ActivityCard(
             }
         }
     }
+}
+
+@Composable
+private fun ActivityDurationText(
+    activity: com.grace.eva.domain.model.Activity,
+    isActivityActive: Boolean,
+    viewModel: TrackerViewModel,
+    currentSave: com.grace.eva.domain.model.Save?
+) {
+    var currentTime by remember { mutableStateOf(Clock.System.now()) }
+
+    // Update current time every second only when activity is active
+    LaunchedEffect(isActivityActive) {
+        if (isActivityActive) {
+            while (true) {
+                delay(1000L)
+                currentTime = Clock.System.now()
+            }
+        }
+    }
+
+    // Get activity end time based on current state
+    val activityEndTime = if (isActivityActive) {
+        currentTime
+    } else {
+        viewModel.getActivityEndTime(activity) ?: currentSave?.end ?: currentTime
+    }
+
+    val duration = remember(activity.begin, activityEndTime) {
+        formatDuration(activityEndTime - activity.begin)
+    }
+
+    Text(
+        text = duration,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }
 
 @Composable

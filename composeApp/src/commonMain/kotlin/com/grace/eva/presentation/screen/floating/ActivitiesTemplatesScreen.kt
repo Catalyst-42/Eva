@@ -46,7 +46,6 @@ fun TemplateManagementScreen(
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        // Fixed header
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -72,7 +71,6 @@ fun TemplateManagementScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // LazyColumn that contains templates and button as items
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -104,8 +102,6 @@ fun TemplateManagementScreen(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
                     Text("Добавить шаблон")
                 }
             }

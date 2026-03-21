@@ -26,6 +26,7 @@ import com.grace.eva.di.MockAppContainer
 import com.grace.eva.di.MockType
 import com.grace.eva.presentation.component.ActivityCard
 import com.grace.eva.presentation.viewmodel.TrackerViewModel
+import com.grace.eva.utils.formatTime
 import kotlinx.coroutines.launch
 
 @Composable
@@ -64,7 +65,8 @@ fun ActivityScreenContent(viewModel: TrackerViewModel) {
         } else {
             activities.filter { activity ->
                 activity.name.contains(searchQuery, ignoreCase = true) ||
-                        activity.note.contains(searchQuery, ignoreCase = true)
+                activity.note.contains(searchQuery, ignoreCase = true) ||
+                formatTime(activity.begin, "dd.mm.yyyy").contains(searchQuery)
             }
         }
         filtered.sortedByDescending { it.begin }

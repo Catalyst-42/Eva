@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -25,10 +27,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,14 +45,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.grace.eva.di.AppContainer
 import com.grace.eva.di.MockAppContainer
 import com.grace.eva.di.MockType
+import com.grace.eva.presentation.component.ActivitiesMapChart
 import com.grace.eva.presentation.component.ActivityCard
 import com.grace.eva.presentation.screen.floating.TemplateManagementScreen
 import com.grace.eva.presentation.viewmodel.TrackerViewModel
 import com.grace.eva.utils.parseColor
-
-data class TemplateManagementState(
-    val isManaging: Boolean = false
-)
+import kotlinx.coroutines.delay
 
 @Composable
 fun TrackerScreen(
@@ -68,22 +70,21 @@ fun TrackerScreenContent(viewModel: TrackerViewModel) {
     val currentSave = state.currentSave
     val activityTemplates = state.activityTemplates
 
-    var managementState by remember { mutableStateOf(TemplateManagementState()) }
+    // Save template management state
+    var isManagingTemplates by rememberSaveable { mutableStateOf(false) }
 
-    if (managementState.isManaging) {
+    if (isManagingTemplates) {
         TemplateManagementScreen(
             activityTemplates = activityTemplates,
             viewModel = viewModel,
-            onClose = { managementState = managementState.copy(isManaging = false) }
+            onClose = { isManagingTemplates = false }
         )
     } else {
         MainTrackerContent(
             currentSave = currentSave,
             currentActivity = currentActivity,
             activityTemplates = activityTemplates,
-            onManageTemplatesClick = {
-                managementState = managementState.copy(isManaging = true)
-            },
+            onManageTemplatesClick = { isManagingTemplates = true },
             viewModel = viewModel
         )
     }
@@ -99,124 +100,168 @@ private fun MainTrackerContent(
 ) {
     val isSaveActive = currentSave?.end == null
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp)
+    Box(
+        modifier = Modifier.fillMaxSize()
     ) {
-        Text(
-            text = "Текущая активность",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
-
-        ActivityCard(
-            activity = currentActivity,
-            viewModel = viewModel,
-            expanded = false
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp)
         ) {
+            // Fixed top content
             Text(
-                text = if (isSaveActive) "Переключить активность" else "Сохранение завершено",
+                text = "Текущая активность",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(bottom = 16.dp)
             )
 
-            IconButton(
-                onClick = onManageTemplatesClick,
-                modifier = Modifier.size(32.dp)
+            ActivityCard(
+                activity = currentActivity,
+                viewModel = viewModel,
+                expanded = false
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Default.Edit,
-                    contentDescription = "Управление шаблонами",
-                    modifier = Modifier.size(20.dp)
+                Text(
+                    text = if (isSaveActive) "Переключить активность" else "Сохранение завершено",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
-            }
-        }
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        if (activityTemplates.isEmpty()) {
-            EmptyTemplatesMessage()
-        } else {
-            ActivityTemplateButtons(
-                activityTemplates = activityTemplates,
-                isSaveActive = isSaveActive,
-                currentSave = currentSave,
-                viewModel = viewModel
-            )
-        }
-
-        InfoMessages(
-            currentSave = currentSave,
-            isSaveActive = isSaveActive
-        )
-    }
-}
-
-@Composable
-private fun ActivityTemplateButtons(
-    activityTemplates: List<com.grace.eva.domain.model.ActivityTemplate>,
-    isSaveActive: Boolean,
-    currentSave: com.grace.eva.domain.model.Save?,
-    viewModel: TrackerViewModel
-) {
-    activityTemplates.chunked(2).forEach { row ->
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            row.forEach { template ->
-                OutlinedButton(
-                    onClick = { viewModel.onActivityTemplateSelected(template) },
-                    modifier = Modifier.weight(1f),
-                    enabled = currentSave != null && isSaveActive,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
+                IconButton(
+                    onClick = onManageTemplatesClick,
+                    modifier = Modifier.size(32.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Start
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(16.dp)
-                                .clip(MaterialTheme.shapes.small)
-                                .background(
-                                    parseColor(template.color) ?: Color.Transparent
-                                )
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = template.name,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Filled.Edit,
+                        contentDescription = "Управление шаблонами",
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
-            if (row.size == 1) Spacer(modifier = Modifier.weight(1f))
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Activity templates
+            if (activityTemplates.isNotEmpty()) {
+                val rows = activityTemplates.chunked(2)
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    items(rows) { row ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            row.forEach { template ->
+                                OutlinedButton(
+                                    onClick = { viewModel.onActivityTemplateSelected(template) },
+                                    modifier = Modifier.weight(1f),
+                                    enabled = currentSave != null && isSaveActive,
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.surface,
+                                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                                    )
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Start
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(16.dp)
+                                                .clip(MaterialTheme.shapes.small)
+                                                .background(
+                                                    parseColor(template.color) ?: Color.Transparent
+                                                )
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = template.name,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                    }
+                                }
+                            }
+                            if (row.size == 1) Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
+                }
+            } else {
+                EmptyTemplatesMessage(modifier = Modifier.fillMaxWidth())
+            }
+
+            InfoMessages(
+                currentSave = currentSave,
+                isSaveActive = isSaveActive
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Timeline section - always at the bottom
+            TimelineSection(
+                currentSave = currentSave,
+                isSaveActive = isSaveActive,
+                activityTemplates = activityTemplates
+            )
         }
-        Spacer(modifier = Modifier.height(8.dp))
     }
 }
 
 @Composable
-private fun EmptyTemplatesMessage() {
+private fun TimelineSection(
+    currentSave: com.grace.eva.domain.model.Save?,
+    isSaveActive: Boolean,
+    activityTemplates: List<com.grace.eva.domain.model.ActivityTemplate>
+) {
+    if (currentSave != null && currentSave.activities.isNotEmpty()) {
+        val sortedActivities = currentSave.activities.sortedBy { it.begin }
+
+        ActivitiesMapChart(
+            activities = sortedActivities,
+            isSaveCompleted = !isSaveActive,
+            saveEnd = currentSave.end,
+            getColorForActivity = { name ->
+                val template = activityTemplates.find { it.name == name }
+                parseColor(template?.color ?: "#2196F3") ?: Color(0xFF2196F3)
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
+    } else {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+        ) {
+            Text(
+                text = "Нет данных для отображения",
+                modifier = Modifier.fillMaxWidth().padding(24.dp),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun EmptyTemplatesMessage(modifier: Modifier = Modifier) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
@@ -242,13 +287,6 @@ private fun InfoMessages(
             text = "Выберите сохранение в настройках",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.error,
-            modifier = Modifier.padding(top = 8.dp)
-        )
-    } else if (!isSaveActive) {
-        Text(
-            text = "Чтобы переключать этапы, продолжите сохранение в настройках",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 8.dp)
         )
     }
