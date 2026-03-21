@@ -44,7 +44,8 @@ fun TemplateManagementScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(horizontal = 16.dp)
+            .padding(top = 16.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -74,7 +75,6 @@ fun TemplateManagementScreen(
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(bottom = 16.dp)
         ) {
             // Templates
             items(

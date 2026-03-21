@@ -356,8 +356,7 @@ fun ActivitySelectionButton(
         border = if (isSelected)
             BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
         else
-            null,
-        shape = RoundedCornerShape(12.dp)
+            null
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,

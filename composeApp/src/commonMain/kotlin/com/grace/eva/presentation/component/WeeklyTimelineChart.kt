@@ -143,7 +143,7 @@ fun ActivitiesMapChart(
         )
     }
 
-    val barHeight = 240.dp
+    val barHeight = 220.dp
 
     Column(
         modifier = modifier.fillMaxWidth()
@@ -203,7 +203,7 @@ fun ActivitiesMapChart(
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -452,7 +452,8 @@ private fun WeekDayBar(
             }
         }
 
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(8.dp))
+
         Text(
             text = formatDate(timelineData.date),
             style = MaterialTheme.typography.labelSmall,

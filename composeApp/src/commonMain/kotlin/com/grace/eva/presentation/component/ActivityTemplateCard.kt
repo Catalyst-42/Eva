@@ -52,7 +52,6 @@ fun TemplateCard(
 
     Card(
         modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded },
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         )

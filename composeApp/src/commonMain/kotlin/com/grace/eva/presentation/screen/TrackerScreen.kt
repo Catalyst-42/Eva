@@ -150,7 +150,7 @@ private fun MainTrackerContent(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Activity templates
             if (activityTemplates.isNotEmpty()) {
@@ -183,8 +183,7 @@ private fun MainTrackerContent(
                                     border = if (isCurrentActivity)
                                         BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                                                 else
-                                        null,
-                                    shape = RoundedCornerShape(12.dp)
+                                        null
                                 ) {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
