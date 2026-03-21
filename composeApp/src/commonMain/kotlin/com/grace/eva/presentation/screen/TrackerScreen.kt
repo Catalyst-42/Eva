@@ -1,5 +1,6 @@
 package com.grace.eva.presentation.screen
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
@@ -158,22 +160,31 @@ private fun MainTrackerContent(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(rows) { row ->
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
                             row.forEach { template ->
+                                val isCurrentActivity = currentActivity?.name == template.name
+                                val activityColor = parseColor(template.color) ?: Color.Transparent
+
                                 OutlinedButton(
                                     onClick = { viewModel.onActivityTemplateSelected(template) },
                                     modifier = Modifier.weight(1f),
                                     enabled = currentSave != null && isSaveActive,
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.surface,
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        containerColor =
+                                            MaterialTheme.colorScheme.surfaceContainer,
                                         contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                                    )
+                                    ),
+                                    border = if (isCurrentActivity)
+                                        BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                                                else
+                                        null,
+                                    shape = RoundedCornerShape(12.dp)
                                 ) {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
@@ -184,9 +195,7 @@ private fun MainTrackerContent(
                                             modifier = Modifier
                                                 .size(16.dp)
                                                 .clip(MaterialTheme.shapes.small)
-                                                .background(
-                                                    parseColor(template.color) ?: Color.Transparent
-                                                )
+                                                .background(activityColor)
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(

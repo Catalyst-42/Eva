@@ -67,13 +67,20 @@ fun ActivityCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { isExpanded = !isExpanded },
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isActivityActive)
-                MaterialTheme.colorScheme.primaryContainer
-            else
-                MaterialTheme.colorScheme.surfaceContainerLow
-        )
+            // containerColor = if (isActivityActive)
+                MaterialTheme.colorScheme.surfaceContainer
+            // else
+            //     MaterialTheme.colorScheme.surfaceС
+        ),
+        border = if (isActivityActive) {
+            BorderStroke(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.outlineVariant
+            )
+        } else {
+            null
+        }
     ) {
         Column(
             modifier = Modifier
@@ -134,7 +141,11 @@ fun ActivityCard(
                     editedNote = editedNote,
                     onNameChange = { editedName = it },
                     onNoteChange = { editedNote = it },
-                    viewModel = viewModel
+                    viewModel = viewModel,
+                    onSaveSuccess = {
+                        // Keep the card expanded after successful save
+                        // isExpanded remains true, no change
+                    }
                 )
             }
         }
@@ -205,7 +216,8 @@ private fun ActivityCardControls(
     editedNote: String,
     onNameChange: (String) -> Unit,
     onNoteChange: (String) -> Unit,
-    viewModel: TrackerViewModel
+    viewModel: TrackerViewModel,
+    onSaveSuccess: () -> Unit
 ) {
     var beginText by remember(activity.begin) { mutableStateOf(formatTime(activity.begin)) }
     var formatError by remember { mutableStateOf(false) }
@@ -287,6 +299,7 @@ private fun ActivityCardControls(
                     },
                     onSuccess = {
                         validationError = null
+                        onSaveSuccess()
                     }
                 )
             },

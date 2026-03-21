@@ -72,13 +72,17 @@ fun SaveCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { expanded = !expanded },
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isCurrentSave)
-                MaterialTheme.colorScheme.primaryContainer
-            else
-                MaterialTheme.colorScheme.surfaceContainerLow
-        )
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
+        ),
+        border = if (isCurrentSave) {
+            BorderStroke(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.outlineVariant
+            )
+        } else {
+            null
+        }
     ) {
         Column(
             modifier = Modifier
