@@ -89,8 +89,16 @@ fun ActivitiesMapChart(
     }
 
     // Last date to show (today if save is active, otherwise save end)
+    // Adjust to exclude midnight day if it creates empty week
     val lastDate = if (isSaveCompleted && saveEnd != null) {
-        saveEnd.toLocalDateTime(timeZone).date
+        val saveEndDateTime = saveEnd.toLocalDateTime(timeZone)
+        // If saveEnd is exactly at midnight (00:00:00), use the previous day
+        // to avoid creating an empty week with zero duration
+        if (saveEndDateTime.hour == 0 && saveEndDateTime.minute == 0 && saveEndDateTime.second == 0) {
+            saveEndDateTime.date.minus(1, DateTimeUnit.DAY)
+        } else {
+            saveEndDateTime.date
+        }
     } else {
         currentTime.toLocalDateTime(timeZone).date
     }
@@ -108,6 +116,11 @@ fun ActivitiesMapChart(
 
     var currentWeekOffset by rememberSaveable { mutableStateOf(totalWeeks - 1) }
 
+    // Reset to last week when activities change (new save is loaded)
+    LaunchedEffect(activities) {
+        currentWeekOffset = totalWeeks - 1
+    }
+
     // Reset to last week when save completes
     LaunchedEffect(isSaveCompleted, saveEnd) {
         if (isSaveCompleted && saveEnd != null) {
@@ -115,7 +128,7 @@ fun ActivitiesMapChart(
         }
     }
 
-    // Keep offset within bounds
+    // Keep offset within bounds when total weeks changes
     LaunchedEffect(totalWeeks) {
         if (currentWeekOffset > totalWeeks - 1) {
             currentWeekOffset = totalWeeks - 1
@@ -431,7 +444,7 @@ private fun WeekDayBar(
                         val textLayoutResult = textMeasurer.measure(
                             text = text,
                             style = TextStyle(
-                                fontSize = 9.sp,
+                                fontSize = 10.sp,
                                 textAlign = TextAlign.Center,
                                 color = Color.Black
                             )

@@ -108,7 +108,6 @@ private fun MainTrackerContent(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
             // Fixed top content

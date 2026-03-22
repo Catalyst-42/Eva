@@ -20,10 +20,8 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 
 data class TrackerUiState(
-    val allSaves: List<Save> = emptyList(),
-    val currentSave: Save? = null,
-    val activityTemplates: List<ActivityTemplate> = emptyList(),
-    val isLoading: Boolean = false
+    val allSaves: List<Save> = emptyList(), val currentSave: Save? = null,
+    val activityTemplates: List<ActivityTemplate> = emptyList(), val isLoading: Boolean = false
 )
 
 sealed class ValidationResult {
@@ -49,9 +47,7 @@ class TrackerViewModel(
                 appContainer.getActivityTemplatesUseCase()
             ) { allSaves: List<Save>, currentSave: Save?, templates: List<ActivityTemplate> ->
                 TrackerUiState(
-                    allSaves = allSaves,
-                    currentSave = currentSave,
-                    activityTemplates = templates
+                    allSaves = allSaves, currentSave = currentSave, activityTemplates = templates
                 )
             }.collect { state ->
                 _uiState.value = state
@@ -112,6 +108,7 @@ class TrackerViewModel(
                     appContainer.updateSaveUseCase(updatedSave)
                     onSuccess()
                 }
+
                 is ValidationResult.Error -> {
                     onError(result.message)
                 }
@@ -121,12 +118,8 @@ class TrackerViewModel(
 
     // Activity logic - единый метод обновления
     fun onUpdateActivity(
-        activity: Activity,
-        newName: String,
-        newNote: String,
-        newBegin: Instant,
-        onError: (String) -> Unit,
-        onSuccess: () -> Unit
+        activity: Activity, newName: String, newNote: String, newBegin: Instant,
+        onError: (String) -> Unit, onSuccess: () -> Unit
     ) {
         viewModelScope.launch {
             when (val result = validateActivityBegin(activity, newBegin)) {
@@ -134,11 +127,10 @@ class TrackerViewModel(
                     onError(result.message)
                     return@launch
                 }
+
                 is ValidationResult.Success -> {
                     val updatedActivity = activity.copy(
-                        name = newName,
-                        note = newNote,
-                        begin = newBegin
+                        name = newName, note = newNote, begin = newBegin
                     )
                     appContainer.updateActivityUseCase(updatedActivity)
                     onSuccess()
@@ -178,15 +170,23 @@ class TrackerViewModel(
         }
     }
 
-    fun onUpdateActivityTemplate(template: ActivityTemplate, newName: String, newColor: String) {
+    fun onUpdateActivityTemplate(
+        template: ActivityTemplate, newName: String, newColor: String, newIsHidden: Boolean
+    ) {
         viewModelScope.launch {
-            val updatedTemplate = template.copy(name = newName, color = newColor)
+            val updatedTemplate =
+                template.copy(name = newName, color = newColor, isHidden = newIsHidden)
             appContainer.updateActivityTemplateUseCase(updatedTemplate)
         }
     }
 
     fun onRenameActivityTemplate(template: ActivityTemplate, newName: String) {
-        onUpdateActivityTemplate(template, newName, template.color)
+        onUpdateActivityTemplate(
+            template,
+            newName,
+            template.color,
+            template.isHidden
+        )
     }
 
     // Sync logic
@@ -204,7 +204,8 @@ class TrackerViewModel(
 
     // Validation
     fun validateActivityBegin(activity: Activity, newBegin: Instant): ValidationResult {
-        val currentSave = _uiState.value.currentSave ?: return ValidationResult.Error("No active save")
+        val currentSave =
+            _uiState.value.currentSave ?: return ValidationResult.Error("No active save")
         val activities = currentSave.activities.sortedBy { it.begin }
         val index = activities.indexOfFirst { it.id == activity.id }
 

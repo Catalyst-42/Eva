@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -24,6 +23,7 @@ import com.grace.eva.presentation.component.ChartSegment
 import com.grace.eva.presentation.viewmodel.TrackerViewModel
 import com.grace.eva.ui.theme.tracker.TemplateColors
 import com.grace.eva.utils.formatDuration
+import com.grace.eva.utils.formatFloat
 import com.grace.eva.utils.parseColor
 import kotlinx.coroutines.delay
 import kotlin.time.Clock
@@ -36,7 +36,8 @@ data class ActivityStat(
     val totalDuration: Duration,
     val count: Int,
     val minDuration: Duration,
-    val maxDuration: Duration
+    val maxDuration: Duration,
+    val firstOccurrenceIndex: Int
 )
 
 @Composable
@@ -77,38 +78,54 @@ fun StatsScreenContent(viewModel: TrackerViewModel) {
         }
     }
 
-    // Sort activities by begin time for calculating durations
-    val sortedActivities = remember(activities) {
+    // Keep activities in their original order (by begin time)
+    val orderedActivities = remember(activities) {
         activities.sortedBy { it.begin }
     }
 
-    // Calculate detailed statistics for each activity
-    val activityStats = remember(sortedActivities, currentTime, currentSave) {
-        val activitiesWithDuration = sortedActivities.mapIndexed { index, activity ->
+    // Calculate detailed statistics for each activity, preserving order of first occurrence
+    val activityStats = remember(orderedActivities, currentTime, currentSave) {
+        val activitiesWithDuration = orderedActivities.mapIndexed { index, activity ->
             val endTime = when {
-                index < sortedActivities.lastIndex -> sortedActivities[index + 1].begin
-                isSaveCompleted -> currentSave!!.end
+                index < orderedActivities.lastIndex -> orderedActivities[index + 1].begin
+                isSaveCompleted -> currentSave.end
                 else -> currentTime
             }
             val duration = endTime - activity.begin
             activity.name to duration
         }
 
-        activitiesWithDuration
-            .groupBy { it.first }
-            .map { (name, durations) ->
-                val totalSeconds = durations.sumOf { it.second.inWholeSeconds }.seconds
-                val count = durations.size
-                val minDuration = durations.minOf { it.second }
-                val maxDuration = durations.maxOf { it.second }
-                ActivityStat(name, totalSeconds, count, minDuration, maxDuration)
+        // Group by activity name and calculate stats, tracking first occurrence index
+        val statsMap = mutableMapOf<String, MutableList<Duration>>()
+        val firstOccurrence = mutableMapOf<String, Int>()
+
+        activitiesWithDuration.forEachIndexed { index, (name, duration) ->
+            statsMap.getOrPut(name) { mutableListOf() }.add(duration)
+            if (!firstOccurrence.containsKey(name)) {
+                firstOccurrence[name] = index
             }
+        }
+
+        statsMap.map { (name, durations) ->
+            val totalSeconds = durations.sumOf { it.inWholeSeconds }.seconds
+            val count = durations.size
+            val minDuration = durations.minOrNull() ?: Duration.ZERO
+            val maxDuration = durations.maxOrNull() ?: Duration.ZERO
+            ActivityStat(
+                name = name,
+                totalDuration = totalSeconds,
+                count = count,
+                minDuration = minDuration,
+                maxDuration = maxDuration,
+                firstOccurrenceIndex = firstOccurrence[name] ?: Int.MAX_VALUE
+            )
+        }
             .filter { it.totalDuration > Duration.ZERO }
-            .sortedByDescending { it.totalDuration.inWholeSeconds }
+            .sortedBy { it.firstOccurrenceIndex } // Sort by order of first appearance
     }
 
-    val totalDuration = if (isSaveCompleted && sortedActivities.isNotEmpty()) {
-        currentSave!!.end - sortedActivities.first().begin
+    val totalDuration = if (isSaveCompleted && orderedActivities.isNotEmpty()) {
+        currentSave.end - orderedActivities.first().begin
     } else {
         activityStats.sumOf { it.totalDuration.inWholeSeconds }.seconds
     }
@@ -118,26 +135,15 @@ fun StatsScreenContent(viewModel: TrackerViewModel) {
     }
 
     // Calculate number of days in the save period
-    val totalDays = remember(currentSave, sortedActivities) {
-        if (currentSave != null && sortedActivities.isNotEmpty()) {
-            val startTime = sortedActivities.first().begin
+    val totalDays = remember(currentSave, orderedActivities, currentTime) {
+        if (currentSave != null && orderedActivities.isNotEmpty()) {
+            val startTime = orderedActivities.first().begin
             val endTime = currentSave.end ?: currentTime
-            val days = (endTime - startTime).inWholeDays.toInt()
-            if (days > 0) days else 1
+            val days = (endTime - startTime).inWholeDays.toDouble()
+            if (days > 0) days else 1.0
         } else {
-            1
+            1.0
         }
-    }
-
-    // Calculate overall statistics
-    val overallStat = remember(activityStats, totalDuration, totalActivities) {
-        ActivityStat(
-            name = "Все этапы",
-            totalDuration = totalDuration,
-            count = totalActivities,
-            minDuration = activityStats.minOfOrNull { it.minDuration } ?: Duration.ZERO,
-            maxDuration = activityStats.maxOfOrNull { it.maxDuration } ?: Duration.ZERO
-        )
     }
 
     // Helper function to get color for activity
@@ -147,7 +153,7 @@ fun StatsScreenContent(viewModel: TrackerViewModel) {
         return Color(0xFF2196F3)
     }
 
-    // Prepare chart data for bar chart
+    // Prepare chart data in the same order as activities appear
     val chartData = remember(activityStats, activityColors) {
         activityStats.mapIndexed { index, stat ->
             ChartSegment(
@@ -158,17 +164,22 @@ fun StatsScreenContent(viewModel: TrackerViewModel) {
         }
     }
 
-    // State for selected activity (null means all activities selected)
-    var selectedActivityName by remember { mutableStateOf<String?>("Все этапы") }
+    // State for selected activity
+    var selectedActivityName by remember { mutableStateOf<String?>(activityStats.firstOrNull()?.name) }
 
     // Find selected activity stat
-    val selectedStat = if (selectedActivityName == "Все этапы") {
-        overallStat
-    } else {
-        activityStats.find { it.name == selectedActivityName }
+    val selectedStat = activityStats.find { it.name == selectedActivityName }
+
+    // Calculate percentage for selected activity
+    val selectedPercentage = remember(selectedStat, totalDuration) {
+        if (selectedStat != null && totalDuration.inWholeSeconds > 0) {
+            (selectedStat.totalDuration.inWholeSeconds.toDouble() / totalDuration.inWholeSeconds.toDouble()) * 100
+        } else {
+            0.0
+        }
     }
 
-    // Prepare activity buttons in 2-column grid
+    // Prepare activity buttons in 2-column grid, preserving order
     val buttonRows = remember(activityStats) {
         activityStats.chunked(2)
     }
@@ -216,7 +227,7 @@ fun StatsScreenContent(viewModel: TrackerViewModel) {
                 }
             }
         } else {
-            // Density section
+            // Density section - uses chartData in original order
             item {
                 DensitySection(
                     chartData = chartData,
@@ -224,7 +235,7 @@ fun StatsScreenContent(viewModel: TrackerViewModel) {
                 )
             }
 
-            // Activity selection section
+            // Activity selection section - buttons in original order
             item {
                 ActivitySelectionSection(
                     selectedActivityName = selectedActivityName,
@@ -232,7 +243,6 @@ fun StatsScreenContent(viewModel: TrackerViewModel) {
                     activityStats = activityStats,
                     buttonRows = buttonRows,
                     totalDuration = totalDuration,
-                    overallDuration = totalDuration,
                     getColorForActivity = { name, index -> getColorForActivity(name, index) }
                 )
             }
@@ -242,8 +252,9 @@ fun StatsScreenContent(viewModel: TrackerViewModel) {
                 item {
                     StatisticsCard(
                         stat = selectedStat,
-                        isOverall = selectedActivityName == "Все этапы",
-                        totalDays = totalDays
+                        totalDays = totalDays,
+                        totalDuration = totalDuration,
+                        percentage = selectedPercentage
                     )
                 }
             }
@@ -279,7 +290,6 @@ fun ActivitySelectionSection(
     activityStats: List<ActivityStat>,
     buttonRows: List<List<ActivityStat>>,
     totalDuration: Duration,
-    overallDuration: Duration,
     getColorForActivity: (String, Int) -> Color
 ) {
     Column(
@@ -292,18 +302,7 @@ fun ActivitySelectionSection(
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
-        ActivitySelectionButton(
-            name = "Все этапы",
-            color = MaterialTheme.colorScheme.outlineVariant,
-            percentage = 0f,
-            totalDuration = overallDuration,
-            isSelected = selectedActivityName == "Все этапы",
-            onClick = { onActivitySelected("Все этапы") },
-            modifier = Modifier.fillMaxWidth(),
-            isAllActivities = true
-        )
-
-        // Buttons for selected activities
+        // Buttons for activities in original order
         buttonRows.forEach { row ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -312,17 +311,19 @@ fun ActivitySelectionSection(
                 row.forEach { stat ->
                     val index = activityStats.indexOf(stat)
                     val isSelected = selectedActivityName == stat.name
-                    val percentage = (stat.totalDuration.inWholeSeconds.toFloat() / totalDuration.inWholeSeconds.toFloat()) * 100
+                    val percentage = if (totalDuration.inWholeSeconds > 0) {
+                        (stat.totalDuration.inWholeSeconds.toFloat() / totalDuration.inWholeSeconds.toFloat()) * 100
+                    } else {
+                        0f
+                    }
 
                     ActivitySelectionButton(
                         name = stat.name,
                         color = getColorForActivity(stat.name, index),
                         percentage = percentage,
-                        totalDuration = null,
                         isSelected = isSelected,
                         onClick = { onActivitySelected(stat.name) },
-                        modifier = Modifier.weight(1f),
-                        isAllActivities = false
+                        modifier = Modifier.weight(1f)
                     )
                 }
                 // Fill empty space if only one item in row
@@ -339,18 +340,15 @@ fun ActivitySelectionButton(
     name: String,
     color: Color,
     percentage: Float,
-    totalDuration: Duration?,
     isSelected: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    isAllActivities: Boolean = false
+    modifier: Modifier = Modifier
 ) {
     OutlinedButton(
         onClick = onClick,
         modifier = modifier,
         colors = ButtonDefaults.outlinedButtonColors(
-            containerColor =
-                MaterialTheme.colorScheme.surfaceContainer,
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
             contentColor = MaterialTheme.colorScheme.onSecondaryContainer
         ),
         border = if (isSelected)
@@ -379,22 +377,28 @@ fun ActivitySelectionButton(
     }
 }
 
-// Helper function for KMP-compatible percentage formatting
-private fun formatPercentage(value: Float): String {
-    val intPart = value.toInt()
-    val fractional = ((value - intPart) * 10).toInt()
-    return if (fractional == 0) "$intPart%" else "$intPart.$fractional%"
-}
-
 @Composable
 fun StatisticsCard(
     stat: ActivityStat,
-    isOverall: Boolean = false,
-    totalDays: Int = 1
+    totalDays: Double,
+    totalDuration: Duration,
+    percentage: Double
 ) {
-    // Calculate average per day: total duration divided by number of days
-    val averagePerDay = if (totalDays > 0) stat.totalDuration / totalDays else Duration.ZERO
-    // Calculate average per week: average per day multiplied by 7
+    // Calculate average duration per occurrence
+    val averageDurationPerOccurrence = if (stat.count > 0) {
+        stat.totalDuration / stat.count
+    } else {
+        Duration.ZERO
+    }
+
+    // Calculate average time per day based on actual days and total time
+    val averagePerDay = if (totalDays > 0) {
+        stat.totalDuration / totalDays
+    } else {
+        Duration.ZERO
+    }
+
+    // Calculate average time per week (7 days)
     val averagePerWeek = averagePerDay * 7
 
     Card(
@@ -410,13 +414,22 @@ fun StatisticsCard(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = if (isOverall) "Статистика по всем этапам" else "Статистика: ${stat.name}",
+                text = "${stat.name}",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
 
-            // Basic statistics
+            // Number of occurrences
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Число этапов:", style = MaterialTheme.typography.bodyMedium)
+                Text("${stat.count}", style = MaterialTheme.typography.bodyMedium)
+            }
+
+            // Total time
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -424,53 +437,63 @@ fun StatisticsCard(
                 Text("Общее время:", style = MaterialTheme.typography.bodyMedium)
                 Text(formatDuration(stat.totalDuration), style = MaterialTheme.typography.bodyMedium)
             }
+
+            // Percentage of total time
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Количество этапов:", style = MaterialTheme.typography.bodyMedium)
-                Text("${stat.count}", style = MaterialTheme.typography.bodyMedium)
+                Text("Плотность:", style = MaterialTheme.typography.bodyMedium)
+                Text("${formatFloat(percentage.toFloat(), 1)}%", style = MaterialTheme.typography.bodyMedium)
             }
 
-            // Average per occurrence
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text("Среднее время на этап:", style = MaterialTheme.typography.bodyMedium)
-                Text(formatDuration(stat.totalDuration / stat.count), style = MaterialTheme.typography.bodyMedium)
-            }
+            Spacer(Modifier.padding(horizontal = 8.dp))
 
-            // Average per day and per week
+            // Average per week
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Среднее время в день:", style = MaterialTheme.typography.bodyMedium)
-                Text(formatDuration(averagePerDay), style = MaterialTheme.typography.bodyMedium)
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text("Среднее время в неделю:", style = MaterialTheme.typography.bodyMedium)
+                Text("В среднем в неделю:", style = MaterialTheme.typography.bodyMedium)
                 Text(formatDuration(averagePerWeek), style = MaterialTheme.typography.bodyMedium)
             }
 
-            // Min/Max statistics
+            // Average per day
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Минимальное время:", style = MaterialTheme.typography.bodyMedium)
-                Text(formatDuration(stat.minDuration), style = MaterialTheme.typography.bodyMedium)
+                Text("В среднем в день:", style = MaterialTheme.typography.bodyMedium)
+                Text(formatDuration(averagePerDay), style = MaterialTheme.typography.bodyMedium)
             }
+
+            // Average duration per occurrence
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Максимальное время:", style = MaterialTheme.typography.bodyMedium)
+                Text("В среднем за этап:", style = MaterialTheme.typography.bodyMedium)
+                Text(formatDuration(averageDurationPerOccurrence), style = MaterialTheme.typography.bodyMedium)
+            }
+
+            Spacer(Modifier.padding(horizontal = 8.dp))
+
+            // Max duration
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Максимальная длина этапа:", style = MaterialTheme.typography.bodyMedium)
                 Text(formatDuration(stat.maxDuration), style = MaterialTheme.typography.bodyMedium)
+            }
+
+            // Min duration
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Минимальная длина этапа:", style = MaterialTheme.typography.bodyMedium)
+                Text(formatDuration(stat.minDuration), style = MaterialTheme.typography.bodyMedium)
             }
         }
     }

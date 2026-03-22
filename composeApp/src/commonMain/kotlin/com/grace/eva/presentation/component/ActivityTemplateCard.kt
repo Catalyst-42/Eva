@@ -125,7 +125,8 @@ fun TemplateCard(
                                 viewModel.onUpdateActivityTemplate(
                                     template,
                                     editedName,
-                                    editedColor
+                                    editedColor,
+                                    template.isHidden
                                 )
                             }
                         },
