@@ -4,7 +4,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,13 +17,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.grace.eva.di.AppContainer
 import com.grace.eva.di.MockAppContainer
 import com.grace.eva.di.MockType
-import com.grace.eva.presentation.component.ActivitiesBarChart
-import com.grace.eva.presentation.component.ChartSegment
+import com.grace.eva.presentation.component.chart.ActivitiesBarChart
+import com.grace.eva.presentation.component.chart.ChartSegment
 import com.grace.eva.presentation.viewmodel.TrackerViewModel
 import com.grace.eva.ui.theme.tracker.TemplateColors
-import com.grace.eva.utils.formatDuration
-import com.grace.eva.utils.formatFloat
-import com.grace.eva.utils.parseColor
+import com.grace.eva.util.formatDuration
+import com.grace.eva.util.formatFloat
+import com.grace.eva.util.parseColor
 import kotlinx.coroutines.delay
 import kotlin.time.Clock
 import kotlin.time.Duration

@@ -24,57 +24,112 @@ import com.grace.eva.ui.theme.tracker.TemplateColors
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
-import kotlin.time.Duration.Companion.seconds
 
 enum class MockType {
     EMPTY, SIMPLE, LARGE
 }
 
 class MockAppContainer(
-    private val type: MockType = MockType.EMPTY,
+    type: MockType = MockType.EMPTY,
 ) : AppContainer {
-
     override val trackerRepository: TrackerRepository = MockTrackerRepository()
 
+    private val now = Clock.System.now()
+
     private val mockSave = when (type) {
-        MockType.EMPTY -> Save(name = "Новое сохранение")
-
-        MockType.SIMPLE -> Save(
-            name = "Тестовое сохранение",
-            activities = mutableListOf(
-                Activity("Сон", "8 часов сна", Clock.System.now() - 8.hours),
-                Activity("Отдых", "Отдыхал на диване", Clock.System.now() - 6.hours),
-                Activity("Пары", "Занятия", Clock.System.now() - 4.hours)
-            ),
-            activityTemplates = mutableListOf(
-                ActivityTemplate("Сон", TemplateColors.defaultColors[0]),
-                ActivityTemplate("Отдых", TemplateColors.defaultColors[1]),
-                ActivityTemplate("Пары", TemplateColors.defaultColors[2]),
-                ActivityTemplate("Транспорт", TemplateColors.defaultColors[3]),
-                ActivityTemplate("Домашка", TemplateColors.defaultColors[4]),
-                ActivityTemplate("Другое", TemplateColors.defaultColors[5])
-            )
+        MockType.EMPTY -> Save(
+            name = "Пустое сохранение",
+            activities = mutableListOf(),
+            activityTemplates = mutableListOf()
         )
 
-        MockType.LARGE -> Save(
-            name = "Большой проект",
-            activities = mutableListOf(
-                Activity("Планирование", "Обсудили задачи", Clock.System.now() - 5.hours - 32.minutes - 16.seconds),
-                Activity("Разработка", "Пишем код", Clock.System.now() - 4.hours - 32.minutes - 16.seconds),
-                Activity("Тестирование", "Проверяем баги", Clock.System.now() - 2.hours - 32.minutes - 16.seconds),
-                Activity("Релиз", "Выпускаем версию", Clock.System.now() - 1.hours - 32.minutes)
-            ),
-            activityTemplates = mutableListOf(
-                ActivityTemplate("Планирование", TemplateColors.defaultColors[0]),
-                ActivityTemplate("Разработка", TemplateColors.defaultColors[1]),
-                ActivityTemplate("Тестирование", TemplateColors.defaultColors[2]),
-                ActivityTemplate("Релиз", TemplateColors.defaultColors[3]),
-                ActivityTemplate("Документация", TemplateColors.defaultColors[4]),
-                ActivityTemplate("Деплой", TemplateColors.defaultColors[5])
+        MockType.SIMPLE -> {
+            val startTime = now - 7.days
+            val activitiesList = listOf(
+                "Сон" to 8.hours,
+                "Работа" to 8.hours,
+                "Обед" to 1.hours,
+                "Работа" to 4.hours,
+                "Спорт" to 1.5.hours,
+                "Ужин" to 1.hours,
+                "Отдых" to 2.hours
             )
-        )
+
+            val activities = mutableListOf<Activity>()
+            var currentTime = startTime
+
+            repeat(5) { day ->
+                activitiesList.forEach { (name, duration) ->
+                    activities.add(Activity(name, "$name activity", currentTime))
+                    currentTime += duration
+                }
+            }
+
+            Save(
+                name = "Средняя неделя",
+                activities = activities,
+                activityTemplates = mutableListOf(
+                    ActivityTemplate("Сон", TemplateColors.getColorForIndex(0)),
+                    ActivityTemplate("Работа", TemplateColors.getColorForIndex(1)),
+                    ActivityTemplate("Обед", TemplateColors.getColorForIndex(2)),
+                    ActivityTemplate("Спорт", TemplateColors.getColorForIndex(3)),
+                    ActivityTemplate("Ужин", TemplateColors.getColorForIndex(4)),
+                    ActivityTemplate("Отдых", TemplateColors.getColorForIndex(5))
+                )
+            )
+        }
+
+        MockType.LARGE -> {
+            val startTime = now - 18.days
+
+            Save(
+                name = "Многоделье",
+                activities = mutableListOf<Activity>().apply {
+                    val activities = listOf(
+                        "Сон" to 8.hours,
+                        "Завтрак" to 1.hours,
+                        "Работа" to 8.hours,
+                        "Обед" to 1.hours,
+                        "Работа" to 4.hours,
+                        "Спорт" to 1.5.hours,
+                        "Ужин" to 1.hours,
+                        "Отдых" to 2.hours,
+                        "Обучение" to 1.5.hours,
+                        "Сон" to 8.hours
+                    )
+
+                    var currentTime = startTime
+
+                    repeat(17) {
+                        activities.forEach { (name, duration) ->
+                            add(Activity(name, "$name activity", currentTime))
+                            currentTime += duration
+                        }
+
+                        currentTime += 30.minutes
+                    }
+                },
+                activityTemplates = mutableListOf(
+                    ActivityTemplate("Сон", TemplateColors.getColorForIndex(0)),
+                    ActivityTemplate("Завтрак", TemplateColors.getColorForIndex(1)),
+                    ActivityTemplate("Работа", TemplateColors.getColorForIndex(2)),
+                    ActivityTemplate("Обед", TemplateColors.getColorForIndex(3)),
+                    ActivityTemplate("Спорт", TemplateColors.getColorForIndex(4)),
+                    ActivityTemplate("Ужин", TemplateColors.getColorForIndex(5)),
+                    ActivityTemplate("Отдых", TemplateColors.getColorForIndex(6)),
+                    ActivityTemplate("Обучение", TemplateColors.getColorForIndex(7)),
+                    ActivityTemplate("Прогулка", TemplateColors.getColorForIndex(8)),
+                    ActivityTemplate("Встречи", TemplateColors.getColorForIndex(9)),
+                    ActivityTemplate("Документация", TemplateColors.getColorForIndex(11)),
+                    ActivityTemplate("Код-ревью", TemplateColors.getColorForIndex(12)),
+                    ActivityTemplate("Планерка", TemplateColors.getColorForIndex(13)),
+                    ActivityTemplate("Перерыв", TemplateColors.getColorForIndex(14))
+                )
+            )
+        }
     }
 
     // Save UseCases
@@ -116,19 +171,19 @@ class MockAppContainer(
     }
 
     // ActivityTemplate UseCases
-    override val addActivityTemplateUseCase = object: AddActivityTemplateUseCase(trackerRepository) {
+    override val addActivityTemplateUseCase = object : AddActivityTemplateUseCase(trackerRepository) {
         override suspend fun invoke(name: String, color: String) {}
     }
 
-    override val removeActivityTemplateUseCase = object: RemoveActivityTemplateUseCase(trackerRepository)  {
+    override val removeActivityTemplateUseCase = object : RemoveActivityTemplateUseCase(trackerRepository) {
         override suspend fun invoke(template: ActivityTemplate) {}
     }
 
-    override val updateActivityTemplateUseCase = object: UpdateActivityTemplateUseCase(trackerRepository)  {
+    override val updateActivityTemplateUseCase = object : UpdateActivityTemplateUseCase(trackerRepository) {
         override suspend fun invoke(template: ActivityTemplate) {}
     }
 
-    override val getActivityTemplatesUseCase = object: GetActivityTemplatesUseCase(trackerRepository) {
+    override val getActivityTemplatesUseCase = object : GetActivityTemplatesUseCase(trackerRepository) {
         override suspend fun invoke(): Flow<List<ActivityTemplate>> {
             return flowOf(mockSave.activityTemplates)
         }

@@ -12,18 +12,24 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.grace.eva.di.AppContainer
+import com.grace.eva.di.MockAppContainer
+import com.grace.eva.di.MockType
 import com.grace.eva.presentation.screen.ActivitiesScreen
 import com.grace.eva.presentation.screen.SettingsScreen
 import com.grace.eva.presentation.screen.StatsScreen
 import com.grace.eva.presentation.screen.TrackerScreen
 
 enum class Screen(
-    val route: String, val icon: ImageVector, val label: String, val order: Int
+    val route: String,
+    val icon: ImageVector,
+    val label: String,
+    val order: Int
 ) {
     Tracker("tracker", Icons.Default.PlayArrow, "Трекер", 0),
     Activities("activities", Icons.Default.Menu, "Активности", 1),
@@ -34,9 +40,32 @@ enum class Screen(
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun NavGraph(
-    modifier: Modifier, navController: NavHostController = rememberNavController(),
+    modifier: Modifier,
+    navController: NavHostController = rememberNavController(),
     appContainer: AppContainer
 ) {
+    val animationDuration = 300
+
+    val forwardEnterTransition = slideInHorizontally(
+        initialOffsetX = { fullWidth -> fullWidth },
+        animationSpec = tween(animationDuration)
+    )
+
+    val forwardExitTransition = slideOutHorizontally(
+        targetOffsetX = { fullWidth -> -fullWidth },
+        animationSpec = tween(animationDuration)
+    )
+
+    val backEnterTransition = slideInHorizontally(
+        initialOffsetX = { fullWidth -> -fullWidth },
+        animationSpec = tween(animationDuration)
+    )
+
+    val backExitTransition = slideOutHorizontally(
+        targetOffsetX = { fullWidth -> fullWidth },
+        animationSpec = tween(animationDuration)
+    )
+
     NavHost(
         navController = navController,
         startDestination = Screen.Tracker.route,
@@ -49,17 +78,9 @@ fun NavGraph(
             val targetOrder = Screen.entries.first { it.route == targetState }.order
 
             if (targetOrder > initialOrder) {
-                // Forward navigation
-                slideInHorizontally(
-                    initialOffsetX = { fullWidth -> fullWidth },
-                    animationSpec = tween(300)
-                )
+                forwardEnterTransition
             } else {
-                // Back navigation
-                slideInHorizontally(
-                    initialOffsetX = { fullWidth -> -fullWidth },
-                    animationSpec = tween(300)
-                )
+                backEnterTransition
             }
         },
         exitTransition = {
@@ -70,17 +91,9 @@ fun NavGraph(
             val targetOrder = Screen.entries.first { it.route == targetState }.order
 
             if (targetOrder > initialOrder) {
-                // Forward navigation
-                slideOutHorizontally(
-                    targetOffsetX = { fullWidth -> -fullWidth },
-                    animationSpec = tween(300)
-                )
+                forwardExitTransition
             } else {
-                // Back navigation
-                slideOutHorizontally(
-                    targetOffsetX = { fullWidth -> fullWidth },
-                    animationSpec = tween(300)
-                )
+                backExitTransition
             }
         }) {
         composable(Screen.Tracker.route) {

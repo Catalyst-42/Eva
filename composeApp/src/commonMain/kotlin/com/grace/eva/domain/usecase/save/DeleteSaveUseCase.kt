@@ -6,5 +6,7 @@ import com.grace.eva.domain.repository.TrackerRepository
 open class DeleteSaveUseCase(
     private val repository: TrackerRepository
 ) {
-    open suspend operator fun invoke(save: Save) = repository.deleteSave(save)
+    open suspend operator fun invoke(save: Save) {
+        repository.deleteSave(save)
+    }
 }

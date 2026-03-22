@@ -1,20 +1,17 @@
 package com.grace.eva.presentation.screen.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.grace.eva.utils.formatDuration
-import com.grace.eva.utils.formatFloat
+import com.grace.eva.util.formatDuration
+import com.grace.eva.util.formatFloat
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 

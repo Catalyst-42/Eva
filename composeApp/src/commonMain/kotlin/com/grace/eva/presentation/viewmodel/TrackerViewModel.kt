@@ -8,7 +8,7 @@ import com.grace.eva.di.AppContainer
 import com.grace.eva.domain.model.Activity
 import com.grace.eva.domain.model.ActivityTemplate
 import com.grace.eva.domain.model.Save
-import com.grace.eva.utils.formatTime
+import com.grace.eva.util.formatTime
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,8 +20,10 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 
 data class TrackerUiState(
-    val allSaves: List<Save> = emptyList(), val currentSave: Save? = null,
-    val activityTemplates: List<ActivityTemplate> = emptyList(), val isLoading: Boolean = false
+    val allSaves: List<Save> = emptyList(),
+    val currentSave: Save? = null,
+    val activityTemplates: List<ActivityTemplate> = emptyList(),
+    val isLoading: Boolean = false
 )
 
 sealed class ValidationResult {
@@ -180,15 +182,6 @@ class TrackerViewModel(
         }
     }
 
-    fun onRenameActivityTemplate(template: ActivityTemplate, newName: String) {
-        onUpdateActivityTemplate(
-            template,
-            newName,
-            template.color,
-            template.isHidden
-        )
-    }
-
     // Sync logic
     fun onExportSave(save: Save) {
         viewModelScope.launch {
@@ -258,6 +251,7 @@ class TrackerViewModel(
     class Factory(
         private val appContainer: AppContainer
     ) : ViewModelProvider.Factory {
+        @Suppress("UNUSED") // Used in iOS
         fun <T : ViewModel> create(modelClass: KClass<T>): T {
             return TrackerViewModel(appContainer) as T
         }

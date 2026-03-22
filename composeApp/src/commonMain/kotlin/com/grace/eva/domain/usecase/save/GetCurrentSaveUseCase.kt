@@ -7,5 +7,7 @@ import kotlinx.coroutines.flow.Flow
 open class GetCurrentSaveUseCase(
     private val repository: TrackerRepository
 ) {
-    open suspend operator fun invoke(): Flow<Save?> = repository.getCurrentSave()
+    open suspend operator fun invoke(): Flow<Save?> {
+        return repository.getCurrentSave()
+    }
 }

@@ -1,7 +1,13 @@
-package com.grace.eva.utils
+package com.grace.eva.util
 
 import kotlin.math.pow
 
+/**
+ * Formats float with given decimal places.
+ *
+ * @param value The float to format
+ * @param decimals Number of decimal places
+ */
 fun formatFloat(value: Float, decimals: Int): String {
     val integerPart = value.toInt()
     val fractionalPart = ((value - integerPart) * 10.0.pow(decimals)).toInt()

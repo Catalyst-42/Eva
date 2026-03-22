@@ -1,4 +1,4 @@
-package com.grace.eva.utils
+package com.grace.eva.util
 
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone

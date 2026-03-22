@@ -1,77 +1,64 @@
 package com.grace.eva.data.repository
 
-import com.grace.eva.domain.model.Save
 import com.grace.eva.domain.model.Activity
 import com.grace.eva.domain.model.ActivityTemplate
+import com.grace.eva.domain.model.Save
+import com.grace.eva.domain.model.Tracker
 import com.grace.eva.domain.repository.TrackerRepository
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
-import platform.Foundation.NSData
-import platform.Foundation.NSDocumentDirectory
-import platform.Foundation.NSSearchPathForDirectoriesInDomains
-import platform.Foundation.NSUserDomainMask
-import platform.Foundation.NSURL
-import platform.Foundation.writeToFile
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.usePinned
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.serialization.json.Json
+import platform.Foundation.NSData
+import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
+import platform.Foundation.NSSearchPathForDirectoriesInDomains
+import platform.Foundation.NSUserDomainMask
 import platform.Foundation.create
 import platform.Foundation.dataWithContentsOfFile
 import platform.Foundation.getBytes
+import platform.Foundation.writeToFile
 import platform.UIKit.UIActivityViewController
 import platform.UIKit.UIApplication
-import platform.UIKit.UIDocumentPickerMode
-import platform.UIKit.UIViewController
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
-import platform.UniformTypeIdentifiers.UTType
-import platform.UIKit.UIDocumentPickerViewController
-import platform.darwin.NSObject
 import platform.UIKit.UIDocumentPickerDelegateProtocol
+import platform.UIKit.UIDocumentPickerMode
+import platform.UIKit.UIDocumentPickerViewController
+import platform.UIKit.UIViewController
+import platform.darwin.NSObject
 import kotlin.time.Clock
-import platform.UIKit.UIImpactFeedbackGenerator
-import platform.UIKit.UIImpactFeedbackStyle
 
 private const val TRACKER_CONFIG_FILE = "tracker.json"
 private const val SAVES_DIRECTORY = "saves"
 
-@Serializable
-data class TrackerMeta(
-    val saves: List<String> = emptyList(),
-    val currentSaveId: String? = null
-)
-
 class TrackerRepositoryImpl : TrackerRepository {
     private val _allSaves = MutableStateFlow<List<Save>>(emptyList())
     private val _currentSave = MutableStateFlow<Save?>(null)
-    private val json = Json { prettyPrint = true; ignoreUnknownKeys = true }
+    private val json = Json {
+        prettyPrint = true
+        ignoreUnknownKeys = true
+    }
+
+    private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     init {
         loadTrackerData()
     }
 
-    private fun triggerHaptic() {
-        val generator = UIImpactFeedbackGenerator(UIImpactFeedbackStyle.UIImpactFeedbackStyleSoft)
-        generator.prepare()
-        generator.impactOccurred()
-    }
-
     @OptIn(ExperimentalForeignApi::class)
     private fun getDocumentsPath(): String? {
         return NSSearchPathForDirectoriesInDomains(
-            NSDocumentDirectory,
-            NSUserDomainMask,
-            true
+            NSDocumentDirectory, NSUserDomainMask, true
         ).firstOrNull() as? String
     }
 
@@ -96,10 +83,7 @@ class TrackerRepositoryImpl : TrackerRepository {
         val fileManager = NSFileManager.defaultManager
         if (!fileManager.fileExistsAtPath(savesDirPath)) {
             fileManager.createDirectoryAtPath(
-                savesDirPath,
-                true,
-                null,
-                null
+                savesDirPath, true, null, null
             )
         }
     }
@@ -112,7 +96,6 @@ class TrackerRepositoryImpl : TrackerRepository {
                 NSData.create(bytes = address, length = bytes.size.toULong())
             }
         }
-        triggerHaptic()
         return data.writeToFile(filePath, true)
     }
 
@@ -133,12 +116,12 @@ class TrackerRepositoryImpl : TrackerRepository {
 
         val meta = if (metaJson != null) {
             try {
-                json.decodeFromString<TrackerMeta>(metaJson)
-            } catch (e: Exception) {
-                TrackerMeta()
+                json.decodeFromString<Tracker>(metaJson)
+            } catch (_: Exception) {
+                Tracker()
             }
         } else {
-            TrackerMeta()
+            Tracker()
         }
 
         val saves = meta.saves.mapNotNull { saveId ->
@@ -147,7 +130,7 @@ class TrackerRepositoryImpl : TrackerRepository {
             if (saveJson != null) {
                 try {
                     json.decodeFromString<Save>(saveJson)
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     null
                 }
             } else null
@@ -157,17 +140,16 @@ class TrackerRepositoryImpl : TrackerRepository {
         _currentSave.value = saves.find { it.id == meta.currentSaveId } ?: saves.firstOrNull()
     }
 
-    private suspend fun saveTrackerMeta() {
-        val metaFilePath = getTrackerMetaFilePath() ?: return
-        val meta = TrackerMeta(
-            saves = _allSaves.value.map { it.id },
-            currentSaveId = _currentSave.value?.id
+    private fun saveTrackerConfig() {
+        val configFilePath = getTrackerMetaFilePath() ?: return
+        val config = Tracker(
+            saves = _allSaves.value.map { it.id }, currentSaveId = _currentSave.value?.id
         )
-        val jsonString = json.encodeToString(meta)
-        writeToFile(jsonString, metaFilePath)
+        val jsonString = json.encodeToString(config)
+        writeToFile(jsonString, configFilePath)
     }
 
-    private suspend fun saveSaveToFile(save: Save) {
+    private fun writeSaveToFile(save: Save) {
         ensureSavesDirectoryExists()
         val filePath = getSaveFilePath(save.id) ?: return
         val jsonString = json.encodeToString(save)
@@ -175,7 +157,7 @@ class TrackerRepositoryImpl : TrackerRepository {
     }
 
     @OptIn(ExperimentalForeignApi::class)
-    private suspend fun deleteSaveFile(save: Save) {
+    private fun deleteSaveFile(save: Save) {
         val filePath = getSaveFilePath(save.id) ?: return
         val fileManager = NSFileManager.defaultManager
         if (fileManager.fileExistsAtPath(filePath)) {
@@ -189,8 +171,7 @@ class TrackerRepositoryImpl : TrackerRepository {
 
     override suspend fun setCurrentSave(save: Save) {
         _currentSave.value = save
-        triggerHaptic()
-        saveTrackerMeta()
+        saveTrackerConfig()
     }
 
     override suspend fun createSave(name: String): Save {
@@ -198,20 +179,21 @@ class TrackerRepositoryImpl : TrackerRepository {
         _allSaves.update { it + newSave }
         _currentSave.value = newSave
 
-        saveSaveToFile(newSave)
-        saveTrackerMeta()
+        writeSaveToFile(newSave)
+        saveTrackerConfig()
 
         return newSave
     }
 
     override suspend fun deleteSave(save: Save) {
-        _allSaves.update { it.filter { it.id != save.id } }
+        _allSaves.update { it.filter { saved -> saved.id != save.id } }
+
         if (_currentSave.value?.id == save.id) {
             _currentSave.value = _allSaves.value.firstOrNull()
         }
 
         deleteSaveFile(save)
-        saveTrackerMeta()
+        saveTrackerConfig()
     }
 
     override suspend fun updateSave(save: Save) {
@@ -223,8 +205,8 @@ class TrackerRepositoryImpl : TrackerRepository {
             _currentSave.value = save
         }
 
-        saveSaveToFile(save)
-        saveTrackerMeta()
+        writeSaveToFile(save)
+        saveTrackerConfig()
     }
 
     override suspend fun addActivity(name: String) {
@@ -233,6 +215,7 @@ class TrackerRepositoryImpl : TrackerRepository {
         val updatedSave = current.copy(
             activities = (current.activities + newActivity).toMutableList()
         )
+
         updateSave(updatedSave)
     }
 
@@ -241,34 +224,35 @@ class TrackerRepositoryImpl : TrackerRepository {
         val updatedSave = current.copy(
             activities = current.activities.filter { it.id != activity.id }.toMutableList()
         )
+
         updateSave(updatedSave)
     }
 
     override suspend fun updateActivity(activity: Activity) {
         val current = _currentSave.value ?: return
-        val updatedSave = current.copy(
-            activities = current.activities.map {
-                if (it.id == activity.id) activity else it
-            }.toMutableList()
-        )
+        val updatedSave =
+            current.copy(activities = current.activities.map { if (it.id == activity.id) activity else it }
+                .toMutableList())
+
         updateSave(updatedSave)
     }
 
-    // ActivityTemplate
     override suspend fun addActivityTemplate(name: String, color: String) {
         val current = _currentSave.value ?: return
         val newTemplate = ActivityTemplate(name = name, color = color)
         val updatedSave = current.copy(
             activityTemplates = (current.activityTemplates + newTemplate).toMutableList()
         )
+
         updateSave(updatedSave)
     }
 
     override suspend fun removeActivityTemplate(template: ActivityTemplate) {
         val current = _currentSave.value ?: return
-        val updatedSave = current.copy(
-            activityTemplates = current.activityTemplates.filter { it.id != template.id }.toMutableList()
-        )
+        val updatedSave =
+            current.copy(activityTemplates = current.activityTemplates.filter { it.id != template.id }
+                .toMutableList())
+
         updateSave(updatedSave)
     }
 
@@ -279,6 +263,7 @@ class TrackerRepositoryImpl : TrackerRepository {
                 if (it.id == template.id) template else it
             }.toMutableList()
         )
+
         updateSave(updatedSave)
     }
 
@@ -288,147 +273,108 @@ class TrackerRepositoryImpl : TrackerRepository {
         }
     }
 
-    // Sync
-    @OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
     override suspend fun exportSave(save: Save) {
-        suspendCancellableCoroutine<Unit> { continuation ->
-            try {
-                val saveFilePath = getSaveFilePath(save.id)
-                if (saveFilePath == null) {
-                    continuation.resumeWithException(Exception("Could not get save file path"))
-                    return@suspendCancellableCoroutine
-                }
+        val filePath = getSaveFilePath(save.id) ?: return
 
-                val fileManager = NSFileManager.defaultManager
-                if (!fileManager.fileExistsAtPath(saveFilePath)) {
-                    val jsonString = json.encodeToString(save)
-                    writeToFile(jsonString, saveFilePath)
-                }
-
-                val fileURL = NSURL.fileURLWithPath(saveFilePath)
-
-                val activityVC = UIActivityViewController(
-                    activityItems = listOf(fileURL),
-                    applicationActivities = null
-                )
-
-                val keyWindow = UIApplication.sharedApplication.keyWindow
-                val rootViewController = keyWindow?.rootViewController
-                val topController = getTopViewController(rootViewController)
-
-                if (topController != null) {
-                    topController.presentViewController(
-                        activityVC,
-                        true,
-                        null
-                    )
-                    continuation.resume(Unit)
-                } else {
-                    continuation.resumeWithException(Exception("Could not find top view controller"))
-                }
-
-            } catch (e: Exception) {
-                continuation.resumeWithException(e)
-            }
+        // Ensure file exists
+        val fileManager = NSFileManager.defaultManager
+        if (!fileManager.fileExistsAtPath(filePath)) {
+            writeSaveToFile(save)
         }
+
+        val fileURL = platform.Foundation.NSURL.fileURLWithPath(filePath)
+
+        val activityVC = UIActivityViewController(
+            activityItems = listOf(fileURL), applicationActivities = null
+        )
+
+        val keyWindow = UIApplication.sharedApplication.keyWindow
+        val rootViewController = keyWindow?.rootViewController
+        val topController = getTopViewController(rootViewController)
+
+        topController?.presentViewController(
+           viewControllerToPresent = activityVC,
+            animated = true,
+            completion = null
+        )
     }
 
-    @OptIn(ExperimentalForeignApi::class)
     override suspend fun importSave() {
-        suspendCancellableCoroutine<Unit> { continuation ->
-            try {
-                val documentPicker = UIDocumentPickerViewController(
-                    documentTypes = listOf("public.json"),
-                    inMode = UIDocumentPickerMode.UIDocumentPickerModeImport
-                ).apply {
-                    allowsMultipleSelection = false
+        val documentPicker = UIDocumentPickerViewController(
+            documentTypes = listOf("public.json"),
+            inMode = UIDocumentPickerMode.UIDocumentPickerModeImport
+        ).apply {
+            allowsMultipleSelection = false
 
-                    val delegate = object : NSObject(), UIDocumentPickerDelegateProtocol {
-                        override fun documentPicker(controller: UIDocumentPickerViewController, didPickDocumentsAtURLs: List<*>) {
-                            val url = didPickDocumentsAtURLs.firstOrNull() as? NSURL ?: run {
-                                continuation.resumeWithException(Exception("No file selected"))
-                                return
-                            }
+            val delegate = object : NSObject(), UIDocumentPickerDelegateProtocol {
+                override fun documentPicker(
+                    controller: UIDocumentPickerViewController, didPickDocumentsAtURLs: List<*>
+                ) {
+                    val url =
+                        didPickDocumentsAtURLs.firstOrNull() as? platform.Foundation.NSURL ?: return
 
-                            val didStartAccessing = url.startAccessingSecurityScopedResource()
+                    val didStartAccessing = url.startAccessingSecurityScopedResource()
 
-                            try {
-                                val path = url.path ?: throw Exception("Invalid file path")
-                                val jsonString = NSData.dataWithContentsOfFile(path)?.let { data ->
-                                    val bytes = ByteArray(data.length.toInt())
-                                    bytes.usePinned { pinned ->
-                                        data.getBytes(pinned.addressOf(0), data.length)
-                                    }
-                                    bytes.decodeToString()
-                                } ?: throw Exception("Could not read file")
+                    try {
+                        val path = url.path ?: return
+                        val jsonString = readFromFile(path) ?: return
 
-                                val importedSave = json.decodeFromString<Save>(jsonString)
+                        val importedSave = json.decodeFromString<Save>(jsonString)
 
-                                val newSave = Save(
-                                    name = importedSave.name,
-                                    activities = importedSave.activities.map { activity ->
-                                        Activity(
-                                            name = activity.name,
-                                            note = activity.note,
-                                            begin = activity.begin
-                                        )
-                                    }.toMutableList(),
-                                    end = importedSave.end
+                        val newSave = Save(
+                            name = importedSave.name,
+                            activities = importedSave.activities.map { activity ->
+                                Activity(
+                                    name = activity.name,
+                                    note = activity.note,
+                                    begin = activity.begin
                                 )
+                            }.toMutableList(),
+                            end = importedSave.end
+                        )
 
-                                val existingWithSameName = _allSaves.value.find { it.name == newSave.name }
-                                val finalName = if (existingWithSameName != null) {
-                                    "${newSave.name} (${Clock.System.now().epochSeconds})"
-                                } else {
-                                    newSave.name
-                                }
-
-                                val saveToAdd = newSave.copy(name = finalName)
-
-                                @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
-                                GlobalScope.launch {
-                                    try {
-                                        ensureSavesDirectoryExists()
-                                        saveSaveToFile(saveToAdd)
-                                        _allSaves.update { it + saveToAdd }
-                                        saveTrackerMeta()
-                                        continuation.resume(Unit)
-                                    } catch (e: Exception) {
-                                        continuation.resumeWithException(e)
-                                    }
-                                }
-
-                            } catch (e: Exception) {
-                                continuation.resumeWithException(e)
-                            } finally {
-                                if (didStartAccessing) {
-                                    url.stopAccessingSecurityScopedResource()
-                                }
-                            }
+                        val existingWithSameName = _allSaves.value.find { it.name == newSave.name }
+                        val finalName = if (existingWithSameName != null) {
+                            "${newSave.name} (${Clock.System.now().epochSeconds})"
+                        } else {
+                            newSave.name
                         }
 
-                        override fun documentPickerWasCancelled(controller: UIDocumentPickerViewController) {
-                            continuation.resumeWithException(Exception("Import cancelled"))
+                        val saveToAdd = newSave.copy(name = finalName)
+
+                        repositoryScope.launch {
+                            ensureSavesDirectoryExists()
+                            writeSaveToFile(saveToAdd)
+                            _allSaves.update { it + saveToAdd }
+                            saveTrackerConfig()
+                        }
+
+                    } finally {
+                        if (didStartAccessing) {
+                            url.stopAccessingSecurityScopedResource()
                         }
                     }
-
-                    this.delegate = delegate
                 }
 
-                val keyWindow = UIApplication.sharedApplication.keyWindow
-                val rootViewController = keyWindow?.rootViewController
-                val topController = getTopViewController(rootViewController)
-
-                if (topController != null) {
-                    topController.presentViewController(documentPicker, true, null)
-                } else {
-                    continuation.resumeWithException(Exception("Could not find top view controller"))
+                override fun documentPickerWasCancelled(
+                    controller: UIDocumentPickerViewController
+                ) {
+                    // Cancel
                 }
-
-            } catch (e: Exception) {
-                continuation.resumeWithException(e)
             }
+
+            this.delegate = delegate
         }
+
+        val keyWindow = UIApplication.sharedApplication.keyWindow
+        val rootViewController = keyWindow?.rootViewController
+        val topController = getTopViewController(rootViewController)
+
+        topController?.presentViewController(
+            viewControllerToPresent = documentPicker,
+            animated = true,
+            completion = null
+        )
     }
 
     private fun getTopViewController(controller: UIViewController?): UIViewController? {

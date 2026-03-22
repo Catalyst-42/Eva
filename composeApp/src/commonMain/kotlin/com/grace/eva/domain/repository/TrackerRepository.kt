@@ -5,7 +5,6 @@ import com.grace.eva.domain.model.Activity
 import com.grace.eva.domain.model.ActivityTemplate
 import kotlinx.coroutines.flow.Flow
 
-// See implementations in *Impl classes
 interface TrackerRepository {
     suspend fun getAllSaves(): Flow<List<Save>>
     suspend fun getCurrentSave(): Flow<Save?>

@@ -1,4 +1,4 @@
-package com.grace.eva.utils
+package com.grace.eva.util
 
 import androidx.compose.ui.graphics.Color
 
@@ -6,8 +6,8 @@ import androidx.compose.ui.graphics.Color
  * Parses a hex color string to Compose Color.
  *
  * Supports formats:
- * - "#RRGGBB" (e.g., "#FF0000" for red)
- * - "RRGGBB" (e.g., "00FF00" for green)
+ * - #RRGGBB
+ * - RRGGBB
  *
  * @param hex The hex color string to parse
  * @return Parsed Color or null if string cannot be parsed
@@ -15,10 +15,11 @@ import androidx.compose.ui.graphics.Color
 fun parseColor(hex: String): Color? {
     val cleanHex = hex.replace("#", "").trim()
     if (cleanHex.length != 6) return null
+    val alphaFF = 0xFF000000
 
     return try {
-        Color(0xFF000000 or cleanHex.toLong(16))
+        Color(alphaFF or cleanHex.toLong(16))
     } catch (e: NumberFormatException) {
-        null
+        null // Invalid color
     }
 }

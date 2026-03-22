@@ -1,4 +1,4 @@
-package com.grace.eva.presentation.component
+package com.grace.eva.presentation.component.chart
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
@@ -28,7 +28,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.grace.eva.domain.model.Activity
-import com.grace.eva.utils.formatDuration
+import com.grace.eva.util.formatDuration
+import kotlinx.coroutines.delay
 import kotlinx.datetime.*
 import kotlinx.datetime.LocalDate
 import kotlin.collections.forEachIndexed
@@ -67,17 +68,17 @@ fun ActivitiesMapChart(
     val timeZone = TimeZone.currentSystemDefault()
 
     // Current time that updates only at midnight
-    var currentTime by remember { mutableStateOf(kotlin.time.Clock.System.now()) }
+    var currentTime by remember { mutableStateOf(System.now()) }
 
     // Wait until next midnight, then update
     LaunchedEffect(Unit) {
         while (true) {
-            val now = kotlin.time.Clock.System.now()
+            val now = System.now()
             val nowLocal = now.toLocalDateTime(timeZone)
             val nextMidnight = nowLocal.date.plus(1, DateTimeUnit.DAY).atStartOfDayIn(timeZone)
             val millisUntilMidnight = (nextMidnight - now).inWholeMilliseconds
-            kotlinx.coroutines.delay(millisUntilMidnight)
-            currentTime = kotlin.time.Clock.System.now()
+            delay(millisUntilMidnight)
+            currentTime = System.now()
         }
     }
 
@@ -249,14 +250,14 @@ private fun WeekDayBar(
     val backgroundColor = MaterialTheme.colorScheme.surface
     val timeZone = TimeZone.currentSystemDefault()
 
-    var currentTime by remember { mutableStateOf(kotlin.time.Clock.System.now()) }
+    var currentTime by remember { mutableStateOf(System.now()) }
 
     // Update every second only if this bar has an active segment
     LaunchedEffect(hasActiveSegment) {
         if (hasActiveSegment) {
             while (true) {
-                kotlinx.coroutines.delay(1000L)
-                currentTime = kotlin.time.Clock.System.now()
+                delay(1000L)
+                currentTime = System.now()
             }
         }
     }

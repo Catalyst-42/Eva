@@ -1,4 +1,4 @@
-package com.grace.eva.presentation.component
+package com.grace.eva.presentation.component.chart
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -14,7 +14,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -22,8 +21,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.grace.eva.utils.formatDuration
-import com.grace.eva.utils.formatFloat
+import com.grace.eva.util.formatDuration
+import com.grace.eva.util.formatFloat
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 

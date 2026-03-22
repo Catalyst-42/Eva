@@ -6,5 +6,7 @@ import com.grace.eva.domain.repository.TrackerRepository
 open class SetCurrentSaveUseCase(
     private val repository: TrackerRepository
 ) {
-    open suspend operator fun invoke(save: Save) = repository.setCurrentSave(save)
+    open suspend operator fun invoke(save: Save) {
+        repository.setCurrentSave(save)
+    }
 }

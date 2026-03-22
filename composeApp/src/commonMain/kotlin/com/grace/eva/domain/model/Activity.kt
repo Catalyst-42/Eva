@@ -7,10 +7,10 @@ import kotlin.time.Instant
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
-@ConsistentCopyVisibility
 @Serializable
+@ConsistentCopyVisibility
 data class Activity private constructor(
-    var name: String,
+    var name: String = "Активность",
     var note: String = "",
     var begin: Instant = Clock.System.now(),
     @Transient private val _id: String? = null
@@ -19,7 +19,7 @@ data class Activity private constructor(
     val id: String = _id ?: Uuid.random().toString()
 
     constructor(
-        name: String,
+        name: String = "Активность",
         note: String = "",
         begin: Instant = Clock.System.now()
     ) : this(name, note, begin, null)

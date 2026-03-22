@@ -34,7 +34,7 @@ import com.grace.eva.di.MockAppContainer
 import com.grace.eva.di.MockType
 import com.grace.eva.domain.model.ActivityTemplate
 import com.grace.eva.presentation.viewmodel.TrackerViewModel
-import com.grace.eva.utils.parseColor
+import com.grace.eva.util.parseColor
 
 @Composable
 fun TemplateCard(

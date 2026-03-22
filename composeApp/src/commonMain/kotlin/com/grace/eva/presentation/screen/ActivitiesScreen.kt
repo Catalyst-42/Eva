@@ -26,7 +26,7 @@ import com.grace.eva.di.MockAppContainer
 import com.grace.eva.di.MockType
 import com.grace.eva.presentation.component.ActivityCard
 import com.grace.eva.presentation.viewmodel.TrackerViewModel
-import com.grace.eva.utils.formatTime
+import com.grace.eva.util.formatTime
 import kotlinx.coroutines.launch
 
 @Composable

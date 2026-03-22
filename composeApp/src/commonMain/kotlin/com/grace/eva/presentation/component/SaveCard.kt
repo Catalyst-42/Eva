@@ -32,9 +32,9 @@ import com.grace.eva.di.MockAppContainer
 import com.grace.eva.di.MockType
 import com.grace.eva.domain.model.Save
 import com.grace.eva.presentation.viewmodel.TrackerViewModel
-import com.grace.eva.utils.formatDuration
-import com.grace.eva.utils.formatTime
-import com.grace.eva.utils.parseInstant
+import com.grace.eva.util.formatDuration
+import com.grace.eva.util.formatTime
+import com.grace.eva.util.parseInstant
 import kotlinx.coroutines.delay
 import kotlin.time.Clock.System.now
 import kotlin.time.Duration
