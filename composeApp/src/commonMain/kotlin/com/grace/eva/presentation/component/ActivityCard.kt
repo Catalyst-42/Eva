@@ -63,14 +63,9 @@ fun ActivityCard(
     }
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { isExpanded = !isExpanded },
+        modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            // containerColor = if (isActivityActive)
                 MaterialTheme.colorScheme.surfaceContainer
-            // else
-            //     MaterialTheme.colorScheme.surfaceС
         ),
         border = if (isActivityActive) {
             BorderStroke(
@@ -79,7 +74,8 @@ fun ActivityCard(
             )
         } else {
             null
-        }
+        },
+        onClick = { isExpanded = !isExpanded }
     ) {
         Column(
             modifier = Modifier
@@ -198,11 +194,11 @@ private fun EmptyActivityCard() {
         )
     ) {
         Text(
-            text = "Нет активной активности",
+            text = "Нет последней активности",
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(24.dp),
-            style = MaterialTheme.typography.bodyLarge,
+                .padding(16.dp),
+            style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
@@ -307,6 +303,15 @@ private fun ActivityCardControls(
             Text("Сохранить")
         }
     }
+}
+
+@Preview
+@Composable
+fun PreviewEmptyActivityCard() {
+    val mockViewModel = remember {
+        TrackerViewModel(appContainer = MockAppContainer(MockType.SIMPLE))
+    }
+    ActivityCard(null, mockViewModel)
 }
 
 @Preview

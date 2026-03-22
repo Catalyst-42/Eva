@@ -1,5 +1,7 @@
 package com.grace.eva.ui.theme.tracker
 
+import androidx.compose.ui.graphics.Color
+
 object TemplateColors {
     val defaultColors = listOf(
         "#2196F3", // Blue
@@ -16,5 +18,9 @@ object TemplateColors {
 
     fun getColorForIndex(index: Int): String {
         return defaultColors[index % defaultColors.size]
+    }
+
+    fun getDefaultColor(): Color {
+        return Color(0xFF2196F3)
     }
 }

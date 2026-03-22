@@ -21,6 +21,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.grace.eva.di.MockAppContainer
+import com.grace.eva.di.MockType
+import com.grace.eva.presentation.viewmodel.TrackerViewModel
 import com.grace.eva.util.formatDuration
 import com.grace.eva.util.formatFloat
 import kotlin.time.Duration
@@ -49,7 +52,7 @@ fun ActivitiesBarChart(
     val textMeasurer = rememberTextMeasurer()
     val textStyle = TextStyle(
         color = Color.Black,
-        fontSize = 12.sp
+        fontSize = 10.sp
     )
 
     Card(
@@ -96,7 +99,7 @@ fun ActivitiesBarChart(
                         style = Stroke(width = 1.dp.toPx())
                     )
 
-                    // Draw percentage text if segment width is large enough (>5% of total width)
+                    // Draw percentage text if segment width is large enough (>10% of total)
                     if (percentage > 10f) {
                         val percentageText = formatFloat(percentage, 1) + "%"
                         val textLayoutResult = textMeasurer.measure(
@@ -150,78 +153,26 @@ fun ActivitiesBarChart(
 
 @Preview(showBackground = true)
 @Composable
-fun PreviewActivitiesBarChart() {
+private fun ActivitiesBarChartPreview() {
+    val mockViewModel = remember {
+        TrackerViewModel(appContainer = MockAppContainer(MockType.SIMPLE))
+    }
+
+    val currentSave = mockViewModel.uiState.value.currentSave
+    val activities = currentSave?.activities ?: emptyList()
+    val chartData = activities.groupBy { it.name }.map { (name, list) ->
+        ChartSegment(
+            name = name,
+            duration = (list.size * 3600).seconds,
+            color = mockViewModel.getColorForActivity(name)
+        )
+    }
+
     MaterialTheme {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Preview 1: Multiple activities with percentage labels
+        Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
             ActivitiesBarChart(
-                data = listOf(
-                    ChartSegment("Работа", 7200.seconds, Color(0xFF4CAF50)),      // ~36%
-                    ChartSegment("Отдых", 3600.seconds, Color(0xFF2196F3)),       // ~18%
-                    ChartSegment("Спорт", 1800.seconds, Color(0xFFFF9800)),       // ~9%
-                    ChartSegment("Обучение", 2700.seconds, Color(0xFF9C27B0))     // ~13.5%
-                ),
-                totalActivities = 12,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            // Preview 2: Two activities only
-            ActivitiesBarChart(
-                data = listOf(
-                    ChartSegment("Работа", 5400.seconds, Color(0xFF4CAF50)),      // ~60%
-                    ChartSegment("Отдых", 3600.seconds, Color(0xFF2196F3))        // ~40%
-                ),
-                totalActivities = 8,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            // Preview 3: Single activity
-            ActivitiesBarChart(
-                data = listOf(
-                    ChartSegment("Работа", 7200.seconds, Color(0xFF4CAF50))       // 100%
-                ),
-                totalActivities = 5,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            // Preview 4: With small segments (<5%) - no labels on small ones
-            ActivitiesBarChart(
-                data = listOf(
-                    ChartSegment("Работа", 7200.seconds, Color(0xFF4CAF50)),      // ~50%
-                    ChartSegment("Отдых", 3600.seconds, Color(0xFF2196F3)),       // ~25%
-                    ChartSegment("Спорт", 1800.seconds, Color(0xFFFF9800)),       // ~12.5%
-                    ChartSegment("Обучение", 900.seconds, Color(0xFF9C27B0)),     // ~6.25%
-                    ChartSegment("Мелкие дела", 100.seconds, Color(0xFFE91E63))   // ~0.7% - no label
-                ),
-                totalActivities = 20,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            // Preview 5: Without total activities count
-            ActivitiesBarChart(
-                data = listOf(
-                    ChartSegment("Работа", 3600.seconds, Color(0xFF4CAF50)),
-                    ChartSegment("Сон", 28800.seconds, Color(0xFF2196F3)),
-                    ChartSegment("Еда", 1800.seconds, Color(0xFFFF9800))
-                ),
-                totalActivities = null,
-                showStatsRow = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            // Preview 6: Without stats row
-            ActivitiesBarChart(
-                data = listOf(
-                    ChartSegment("Работа", 3600.seconds, Color(0xFF4CAF50)),
-                    ChartSegment("Сон", 28800.seconds, Color(0xFF2196F3))
-                ),
-                totalActivities = 10,
-                showStatsRow = false,
+                data = chartData,
+                totalActivities = activities.size,
                 modifier = Modifier.fillMaxWidth()
             )
         }

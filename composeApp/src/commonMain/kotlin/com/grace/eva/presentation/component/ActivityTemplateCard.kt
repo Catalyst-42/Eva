@@ -1,8 +1,6 @@
 package com.grace.eva.presentation.component
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,7 +25,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.grace.eva.di.MockAppContainer
@@ -42,19 +39,23 @@ fun TemplateCard(
     viewModel: TrackerViewModel,
     expanded: Boolean = false
 ) {
-    var expanded by remember { mutableStateOf(expanded) }
+    var isExpanded by remember { mutableStateOf(expanded) }
     var editedName by remember(template.id, template.name) {
         mutableStateOf(template.name)
     }
     var editedColor by remember(template.id, template.color) {
         mutableStateOf(template.color)
     }
+    var formatError by remember { mutableStateOf(false) }
+    var validationError by remember { mutableStateOf<String?>(null) }
 
     Card(
-        modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded },
+        modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-        )
+        ),
+        shape = MaterialTheme.shapes.medium,
+        onClick = { isExpanded = !isExpanded }
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(16.dp)
@@ -64,9 +65,10 @@ fun TemplateCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
-                    modifier = Modifier.size(16.dp).clip(MaterialTheme.shapes.small).background(
-                        parseColor(template.color) ?: Color.Red
-                    )
+                    modifier = Modifier
+                        .size(16.dp)
+                        .clip(MaterialTheme.shapes.small)
+                        .background(parseColor(template.color) ?: MaterialTheme.colorScheme.surfaceVariant)
                 )
 
                 Spacer(modifier = Modifier.size(12.dp))
@@ -79,7 +81,7 @@ fun TemplateCard(
                 )
             }
 
-            if (expanded) {
+            if (isExpanded) {
                 Spacer(modifier = Modifier.height(16.dp))
 
                 OutlinedTextField(
@@ -87,17 +89,29 @@ fun TemplateCard(
                     onValueChange = { editedName = it },
                     label = { Text("Название шаблона") },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
+                    isError = editedName.isBlank()
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
                 OutlinedTextField(
                     value = editedColor,
-                    onValueChange = { editedColor = it },
+                    onValueChange = {
+                        editedColor = it
+                    },
                     label = { Text("Цвет") },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
+                    isError = formatError || validationError != null,
+                    supportingText = if (formatError || validationError != null) {
+                        {
+                            when {
+                                formatError -> Text("Используйте формат #RRGGBB")
+                                else -> Text(validationError!!)
+                            }
+                        }
+                    } else null
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -110,28 +124,40 @@ fun TemplateCard(
                         onClick = {
                             viewModel.onRemoveActivityTemplate(template)
                         },
-                        modifier = Modifier.weight(1f),
-                        border = BorderStroke(
-                            width = 1.dp,
-                            color = MaterialTheme.colorScheme.outline
-                        )
+                        modifier = Modifier.weight(1f)
                     ) {
                         Text("Удалить")
                     }
 
                     Button(
                         onClick = {
-                            if (editedName.isNotBlank() && editedColor.isNotBlank()) {
-                                viewModel.onUpdateActivityTemplate(
-                                    template,
-                                    editedName,
-                                    editedColor,
-                                    template.isHidden
-                                )
+                            // Validate color format
+                            val color = parseColor(editedColor)
+                            if (color == null) {
+                                formatError = true
+                                return@Button
                             }
+                            formatError = false
+                            validationError = null
+
+                            // Validate name
+                            if (editedName.isBlank()) {
+                                validationError = "Название не может быть пустым"
+                                return@Button
+                            }
+
+                            // Use unified update method
+                            viewModel.onUpdateActivityTemplate(
+                                template = template,
+                                newName = editedName,
+                                newColor = editedColor,
+                                newIsHidden = template.isHidden, onSuccess = {
+                                    validationError = null
+                                }
+                            )
                         },
                         modifier = Modifier.weight(1f),
-                        enabled = editedName.isNotBlank() && editedColor.isNotBlank()
+                        enabled = editedName.isNotBlank()
                     ) {
                         Text("Сохранить")
                     }
@@ -143,34 +169,29 @@ fun TemplateCard(
 
 @Preview(showBackground = true)
 @Composable
-fun PreviewTemplateCardExpanded() {
-    val template = ActivityTemplate(
-        name = "Отдых",
-        color = "#4CAF50"
-    )
-
-    val mockViewModel = TrackerViewModel(appContainer = MockAppContainer(MockType.SIMPLE))
-
-    TemplateCard(
-        template = template,
-        viewModel = mockViewModel,
-        expanded = true
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
 fun PreviewTemplateCardClosed() {
-    val template = ActivityTemplate(
-        name = "Работа",
-        color = "#FF5722"
-    )
-
+    val template = ActivityTemplate()
     val mockViewModel = TrackerViewModel(appContainer = MockAppContainer(MockType.SIMPLE))
 
     TemplateCard(
         template = template,
         viewModel = mockViewModel,
         expanded = false
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewTemplateCardExpanded() {
+    val template = ActivityTemplate(
+        name = "Eva is Experiment version Android",
+        color = "Broken one"
+    )
+    val mockViewModel = TrackerViewModel(appContainer = MockAppContainer(MockType.SIMPLE))
+
+    TemplateCard(
+        template = template,
+        viewModel = mockViewModel,
+        expanded = true
     )
 }

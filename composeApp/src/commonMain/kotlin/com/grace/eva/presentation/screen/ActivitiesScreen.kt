@@ -128,7 +128,12 @@ fun ActivityScreenContent(viewModel: TrackerViewModel) {
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
                     modifier = Modifier.weight(1f),
-                    placeholder = { Text("Поиск") },
+                    placeholder = {
+                        Text(
+                            "Поиск",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                      },
                     singleLine = true,
                     colors = TextFieldDefaults.colors(
                         unfocusedContainerColor = Color.Transparent,
@@ -226,19 +231,8 @@ fun ActivityScreenContent(viewModel: TrackerViewModel) {
             } else {
                 items(
                     items = filteredActivities,
-                    key = { activity -> "${activity.id}-${activity.begin}" }
+                    key = { activity -> activity.id }
                 ) { activity ->
-                    // Find next activity in chronological order from ALL activities,
-                    // not just filtered ones, to maintain correct time display
-                    val currentIndexInAll = allActivitiesSorted.indexOf(activity)
-                    val nextActivityBegin = if (currentIndexInAll > 0) {
-                        // Since we're sorted descending, the next activity in chronological order
-                        // is actually the previous item in the list
-                        allActivitiesSorted[currentIndexInAll - 1].begin
-                    } else {
-                        null // This is the most recent activity
-                    }
-
                     ActivityCard(
                         activity = activity,
                         viewModel = viewModel,
@@ -261,8 +255,7 @@ fun EmptyActivitiesCard() {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(16.dp),
         ) {
             Text(
                 text = "Нет активностей",
@@ -275,15 +268,9 @@ fun EmptyActivitiesCard() {
 
 @Preview(showBackground = true)
 @Composable
-fun PreviewEmptyActivitiesCard_NoActivities() {
-    EmptyActivitiesCard()
-}
-
-@Preview(showBackground = true)
-@Composable
-fun PreviewActivitiesScreen() {
+fun ActivitiesScreenPreview() {
     val mockViewModel = remember {
-        TrackerViewModel(appContainer = MockAppContainer(MockType.LARGE))
+        TrackerViewModel(appContainer = MockAppContainer(MockType.SIMPLE))
     }
 
     ActivityScreenContent(mockViewModel)
@@ -291,7 +278,7 @@ fun PreviewActivitiesScreen() {
 
 @Preview(showBackground = true)
 @Composable
-fun PreviewActivitiesScreen_NoSaveSelected() {
+fun ActivitiesScreenEmptyPreview() {
     val mockViewModel = remember {
         TrackerViewModel(appContainer = MockAppContainer(MockType.EMPTY))
     }

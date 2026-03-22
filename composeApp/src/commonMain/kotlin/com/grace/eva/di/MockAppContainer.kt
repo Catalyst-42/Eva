@@ -47,7 +47,7 @@ class MockAppContainer(
         )
 
         MockType.SIMPLE -> {
-            val startTime = now - 7.days
+            val startTime = now - 5.days
             val activitiesList = listOf(
                 "Сон" to 8.hours,
                 "Работа" to 8.hours,
@@ -61,7 +61,7 @@ class MockAppContainer(
             val activities = mutableListOf<Activity>()
             var currentTime = startTime
 
-            repeat(5) { day ->
+            repeat(4) { day ->
                 activitiesList.forEach { (name, duration) ->
                     activities.add(Activity(name, "$name activity", currentTime))
                     currentTime += duration
@@ -127,7 +127,8 @@ class MockAppContainer(
                     ActivityTemplate("Код-ревью", TemplateColors.getColorForIndex(12)),
                     ActivityTemplate("Планерка", TemplateColors.getColorForIndex(13)),
                     ActivityTemplate("Перерыв", TemplateColors.getColorForIndex(14))
-                )
+                ),
+                end = now
             )
         }
     }

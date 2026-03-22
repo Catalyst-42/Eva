@@ -46,7 +46,7 @@ fun SaveCard(
     viewModel: TrackerViewModel,
     expanded: Boolean = false
 ) {
-    var expanded by remember { mutableStateOf(expanded) }
+    var isExpanded by remember { mutableStateOf(expanded) }
     var editedName by remember(save.name) { mutableStateOf(save.name) }
     var editedEnd by remember(save.end) { mutableStateOf(save.end) }
     var duration by remember { mutableStateOf(Duration.ZERO) }
@@ -54,9 +54,9 @@ fun SaveCard(
     val state by viewModel.uiState.collectAsState()
     val isCurrentSave = state.currentSave?.id == save.id
     val isSaveActive = save.end == null
-
     val firstActivityBegin = save.activities.firstOrNull()?.begin
 
+    // Timer for active save
     LaunchedEffect(save.activities.size, save.end) {
         if (isSaveActive && firstActivityBegin != null) {
             while (true) {
@@ -69,85 +69,37 @@ fun SaveCard(
     }
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { expanded = !expanded },
+        modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer
         ),
+        shape = MaterialTheme.shapes.medium,
         border = if (isCurrentSave) {
-            BorderStroke(
-                width = 1.dp,
-                color = MaterialTheme.colorScheme.outlineVariant
-            )
-        } else {
-            null
-        }
+            BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        } else null,
+        onClick = { isExpanded = !isExpanded }
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
+            modifier = Modifier.fillMaxWidth().padding(16.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = save.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
+            SaveCardHeader(
+                name = save.name,
+                beginDate = save.activities.firstOrNull()?.begin,
+                activitiesCount = save.activities.size,
+                duration = duration
+            )
 
-                val begin = if (save.activities.isNotEmpty()) {
-                    formatTime(save.activities.first().begin, "dd.mm.yyyy")
-                } else {
-                    "Не начато"
-                }
-
-                Text(
-                    text = "От $begin",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(start = 8.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "Этапов: ${save.activities.size}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-
-                Text(
-                    text = formatDuration(duration),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-
-            if (expanded) {
+            if (isExpanded) {
                 Spacer(modifier = Modifier.height(16.dp))
 
-                SaveCardControls(
+                SaveCardForm(
                     save = save,
                     editedName = editedName,
                     editedEnd = editedEnd,
                     onNameChange = { editedName = it },
-                    onEndChange = { newEnd ->
-                        editedEnd = newEnd
-                    },
-                    viewModel = viewModel,
+                    onEndChange = { editedEnd = it },
+                    isCurrentSave = isCurrentSave,
+                    viewModel = viewModel
                 )
             }
         }
@@ -155,26 +107,70 @@ fun SaveCard(
 }
 
 @Composable
-fun SaveCardControls(
+private fun SaveCardHeader(
+    name: String,
+    beginDate: Instant?,
+    activitiesCount: Int,
+    duration: Duration
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = name,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
+
+        val beginText = beginDate?.let {
+            "От ${formatTime(it, "dd.mm.yyyy")}"
+        } ?: "Не начато"
+
+        Text(
+            text = beginText,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(start = 8.dp)
+        )
+    }
+
+    Spacer(modifier = Modifier.height(4.dp))
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = "Этапов: $activitiesCount",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            text = formatDuration(duration),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+@Composable
+private fun SaveCardForm(
     save: Save,
     editedName: String,
     editedEnd: Instant?,
     onNameChange: (String) -> Unit,
     onEndChange: (Instant?) -> Unit,
-    viewModel: TrackerViewModel,
+    isCurrentSave: Boolean,
+    viewModel: TrackerViewModel
 ) {
-    var localEditedEnd by remember(editedEnd) { mutableStateOf(editedEnd) }
-    var endText by remember(editedEnd) { mutableStateOf(editedEnd?.let { formatTime(it) } ?: "") }
+    var endText by remember(editedEnd) { mutableStateOf(editedEnd?.let { formatTime(it) } ?: "Нет") }
     var formatError by remember { mutableStateOf(false) }
     var validationError by remember { mutableStateOf<String?>(null) }
-
-    LaunchedEffect(editedEnd) {
-        localEditedEnd = editedEnd
-        endText = editedEnd?.let { formatTime(it) } ?: ""
-    }
-
-    val state by viewModel.uiState.collectAsState()
-    val isCurrentSave = state.currentSave?.id == save.id
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -188,34 +184,59 @@ fun SaveCardControls(
             singleLine = true
         )
 
-        Column {
-            OutlinedTextField(
-                value = endText,
-                onValueChange = {
-                    endText = it
-                },
-                label = { Text("Завершено") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                isError = formatError || validationError != null,
-                enabled = save.end != null,
-                supportingText = if (formatError || validationError != null) {
-                    {
-                        when {
-                            formatError -> Text("Неверный формат: дд.мм.гггг ЧЧ:ММ:СС")
-                            else -> Text(validationError!!)
-                        }
+        OutlinedTextField(
+            value = endText,
+            onValueChange = { endText = it },
+            label = { Text("Завершено") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            isError = formatError || validationError != null,
+            enabled = save.end != null,
+            supportingText = if (formatError || validationError != null) {
+                {
+                    when {
+                        formatError -> Text("Неверный формат: дд.мм.гггг ЧЧ:ММ:СС")
+                        else -> Text(validationError!!)
                     }
-                } else null
-            )
-        }
+                }
+            } else null
+        )
     }
 
     Spacer(modifier = Modifier.height(16.dp))
 
+    SaveCardActions(
+        save = save,
+        editedName = editedName,
+        endText = endText,
+        isCurrentSave = isCurrentSave,
+        onFormatError = { formatError = true },
+        onFormatSuccess = { formatError = false },
+        onValidationError = { validationError = it },
+        onValidationSuccess = { validationError = null },
+        onNameSaved = onNameChange,
+        onEndSaved = onEndChange,
+        viewModel = viewModel
+    )
+}
+
+@Composable
+private fun SaveCardActions(
+    save: Save,
+    editedName: String,
+    endText: String,
+    isCurrentSave: Boolean,
+    onFormatError: () -> Unit,
+    onFormatSuccess: () -> Unit,
+    onValidationError: (String?) -> Unit,
+    onValidationSuccess: () -> Unit,
+    onNameSaved: (String) -> Unit,
+    onEndSaved: (Instant?) -> Unit,
+    viewModel: TrackerViewModel
+) {
     Button(
         onClick = { viewModel.onExportSave(save) },
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth()
     ) {
         Text("Экспортировать")
     }
@@ -234,15 +255,13 @@ fun SaveCardControls(
                     viewModel.onContinueSave(save)
                 }
             },
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f)
         ) {
             Text(if (save.end == null) "Завершить" else "Продолжить")
         }
 
         Button(
-            onClick = {
-                viewModel.onSetCurrentSave(save)
-            },
+            onClick = { viewModel.onSetCurrentSave(save) },
             modifier = Modifier.weight(1f),
             enabled = !isCurrentSave
         ) {
@@ -257,65 +276,45 @@ fun SaveCardControls(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         OutlinedButton(
-            onClick = {
-                viewModel.onDeleteSave(save)
-            },
-            modifier = Modifier.weight(1f),
-            border = BorderStroke(
-                width = 1.dp,
-                color = MaterialTheme.colorScheme.outline
-            )
+            onClick = { viewModel.onDeleteSave(save) },
+            modifier = Modifier.weight(1f)
         ) {
             Text("Удалить")
         }
 
         Button(
             onClick = {
-                // Update name if changed
-                if (editedName != save.name) {
-                    viewModel.onRenameSave(save, editedName)
-                }
+                // Parse time and validate
+                var newEnd: Instant? = null
 
-                // Parse and validate end time
                 if (endText.isNotBlank()) {
-                    val newEnd = parseInstant(endText)
-                    if (newEnd == null) {
-                        formatError = true
+                    val parsed = parseInstant(endText)
+                    if (parsed == null) {
+                        onFormatError()
                         return@Button
-                    } else {
-                        formatError = false
-                        validationError = null
                     }
-
-                    if (newEnd != save.end) {
-                        viewModel.onUpdateSaveEndWithCallback(
-                            save = save,
-                            newEnd = newEnd,
-                            onError = { errorMessage ->
-                                validationError = errorMessage
-                            },
-                            onSuccess = {
-                                validationError = null
-                                onEndChange(newEnd)
-                            }
-                        )
-                    }
-                } else {
-                    // Empty field means no end time (active save)
-                    if (save.end != null) {
-                        viewModel.onUpdateSaveEndWithCallback(
-                            save = save,
-                            newEnd = null,
-                            onError = { errorMessage ->
-                                validationError = errorMessage
-                            },
-                            onSuccess = {
-                                validationError = null
-                                onEndChange(null)
-                            }
-                        )
-                    }
+                    onFormatSuccess()
+                    newEnd = parsed
                 }
+
+                // Update save
+                viewModel.onUpdateSave(
+                    save = save,
+                    newName = editedName,
+                    newEnd = newEnd,
+                    onError = { errorMessage ->
+                        onValidationError(errorMessage)
+                    },
+                    onSuccess = {
+                        onValidationSuccess()
+                        if (editedName != save.name) {
+                            onNameSaved(editedName)
+                        }
+                        if (newEnd != save.end) {
+                            onEndSaved(newEnd)
+                        }
+                    }
+                )
             },
             modifier = Modifier.weight(1f)
         ) {
@@ -328,29 +327,28 @@ fun SaveCardControls(
 @Composable
 fun PreviewSaveCard() {
     val mockViewModel = remember {
-        TrackerViewModel(appContainer = MockAppContainer(MockType.SIMPLE))
+        TrackerViewModel(
+            appContainer = MockAppContainer(MockType.SIMPLE)
+        )
     }
 
     SaveCard(
         save = mockViewModel.uiState.value.currentSave ?: Save(),
         viewModel = mockViewModel,
-        expanded = true
     )
 }
 
 @Preview
 @Composable
-fun PreviewSaveCardCompleted() {
+fun PreviewSaveCardExpanded() {
     val mockViewModel = remember {
-        TrackerViewModel(appContainer = MockAppContainer(MockType.SIMPLE))
+        TrackerViewModel(
+            appContainer = MockAppContainer(MockType.LARGE)
+        )
     }
 
-    val completedSave = (mockViewModel.uiState.value.currentSave ?: Save()).copy(
-        end = now()
-    )
-
     SaveCard(
-        save = completedSave,
+        save = mockViewModel.uiState.value.currentSave ?: Save(),
         viewModel = mockViewModel,
         expanded = true
     )

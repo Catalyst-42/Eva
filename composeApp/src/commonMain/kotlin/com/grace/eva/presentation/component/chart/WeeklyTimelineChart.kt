@@ -27,7 +27,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.grace.eva.di.MockAppContainer
+import com.grace.eva.di.MockType
 import com.grace.eva.domain.model.Activity
+import com.grace.eva.presentation.viewmodel.TrackerViewModel
 import com.grace.eva.util.formatDuration
 import kotlinx.coroutines.delay
 import kotlinx.datetime.*
@@ -593,27 +596,20 @@ private fun formatDate(date: LocalDate): String {
 @Preview(showBackground = true)
 @Composable
 private fun PreviewActivitiesMapChart() {
+    val mockViewModel = remember {
+        TrackerViewModel(appContainer = MockAppContainer(MockType.SIMPLE))
+    }
+
+    val currentSave = mockViewModel.uiState.value.currentSave
+    val activities = currentSave?.activities ?: emptyList()
+
     MaterialTheme {
         Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-            val mockActivities = listOf(
-                Activity(name = "Сон", begin = System.now().minus(5.days).minus(22.hours)),
-                Activity(name = "Работа", begin = System.now().minus(4.days)),
-                Activity(name = "Отдых", begin = System.now().minus(3.days).minus(5.hours)),
-                Activity(name = "Работа", begin = System.now().minus(1.days).minus(12.hours)),
-            )
-
-            fun getColor(name: String): Color = when (name) {
-                "Работа" -> Color(0xFF2196F3)
-                "Отдых" -> Color(0xFFFF9800)
-                "Сон" -> Color(0xFF4CAF50)
-                else -> Color(0xFF9C27B0)
-            }
-
             ActivitiesMapChart(
-                activities = mockActivities,
-                isSaveCompleted = false,
-                saveEnd = null,
-                getColorForActivity = { name -> getColor(name) },
+                activities = activities,
+                isSaveCompleted = currentSave?.end != null,
+                saveEnd = currentSave?.end,
+                getColorForActivity = { name -> mockViewModel.getColorForActivity(name) },
                 modifier = Modifier.fillMaxWidth()
             )
         }

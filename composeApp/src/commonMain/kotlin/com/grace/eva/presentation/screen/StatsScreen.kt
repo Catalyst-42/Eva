@@ -29,7 +29,6 @@ import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
-// Data class for activity statistics
 data class ActivityStat(
     val name: String,
     val totalDuration: Duration,
@@ -120,7 +119,7 @@ fun StatsScreenContent(viewModel: TrackerViewModel) {
             )
         }
             .filter { it.totalDuration > Duration.ZERO }
-            .sortedBy { it.firstOccurrenceIndex } // Sort by order of first appearance
+            .sortedBy { it.firstOccurrenceIndex }
     }
 
     val totalDuration = if (isSaveCompleted && orderedActivities.isNotEmpty()) {
@@ -226,7 +225,7 @@ fun StatsScreenContent(viewModel: TrackerViewModel) {
                 }
             }
         } else {
-            // Density section - uses chartData in original order
+            // Density section
             item {
                 DensitySection(
                     chartData = chartData,
@@ -234,7 +233,7 @@ fun StatsScreenContent(viewModel: TrackerViewModel) {
                 )
             }
 
-            // Activity selection section - buttons in original order
+            // Activity selection section
             item {
                 ActivitySelectionSection(
                     selectedActivityName = selectedActivityName,
@@ -500,7 +499,7 @@ fun StatisticsCard(
 
 @Preview(showBackground = true)
 @Composable
-fun PreviewStatsScreen() {
+fun StatsScreenPreview() {
     val mockViewModel = remember {
         TrackerViewModel(appContainer = MockAppContainer(MockType.LARGE))
     }
@@ -509,7 +508,7 @@ fun PreviewStatsScreen() {
 
 @Preview(showBackground = true)
 @Composable
-fun PreviewStatsScreen_NoSave() {
+fun StatsScreenEmptyPreview() {
     val mockViewModel = remember {
         TrackerViewModel(appContainer = MockAppContainer(MockType.EMPTY))
     }

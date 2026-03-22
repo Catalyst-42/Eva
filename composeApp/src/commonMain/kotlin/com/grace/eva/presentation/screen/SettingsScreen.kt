@@ -1,14 +1,11 @@
 package com.grace.eva.presentation.screen
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -49,13 +46,10 @@ fun SettingsScreenContent(
 ) {
     val state by viewModel.uiState.collectAsState()
     val allSaves = state.allSaves
-    val currentSave = state.currentSave
+    state.currentSave
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp)
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)
     ) {
         Text(
             text = "Настройки сохранений",
@@ -66,14 +60,12 @@ fun SettingsScreenContent(
 
         if (allSaves.isEmpty()) {
             Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
+                modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerLow
                 )
             ) {
                 Text(
-                    text = "Нет сохранений. Создайте новое.",
-                    modifier = Modifier.padding(16.dp)
+                    text = "Нет сохранений. Создайте новое.", modifier = Modifier.padding(16.dp)
                 )
             }
         } else {
@@ -89,8 +81,7 @@ fun SettingsScreenContent(
         Button(
             onClick = {
                 viewModel.onCreateSave("Новое сохранение ${allSaves.size + 1}")
-            },
-            modifier = Modifier.fillMaxWidth()
+            }, modifier = Modifier.fillMaxWidth()
         ) {
             Text("Создать новое сохранение")
         }
@@ -100,8 +91,7 @@ fun SettingsScreenContent(
         Button(
             onClick = {
                 viewModel.onImportSave()
-            },
-            modifier = Modifier.fillMaxWidth()
+            }, modifier = Modifier.fillMaxWidth()
         ) {
             Text("Импортировать файл сохранения")
         }
@@ -110,21 +100,9 @@ fun SettingsScreenContent(
 
 @Preview(showBackground = true)
 @Composable
-fun PreviewSettingsScreen() {
+fun SettingsScreenPreview() {
     val mockViewModel = remember {
         TrackerViewModel(appContainer = MockAppContainer(MockType.LARGE))
-    }
-
-    SettingsScreenContent(
-        viewModel = mockViewModel
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun PreviewSettingsScreen_NoSaves() {
-    val mockViewModel = remember {
-        TrackerViewModel(appContainer = MockAppContainer(MockType.EMPTY))
     }
 
     SettingsScreenContent(

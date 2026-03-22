@@ -1,5 +1,10 @@
 package com.grace.eva.presentation.screen
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -43,6 +48,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.grace.eva.di.AppContainer
 import com.grace.eva.di.MockAppContainer
 import com.grace.eva.di.MockType
+import com.grace.eva.domain.model.Activity
+import com.grace.eva.domain.model.ActivityTemplate
+import com.grace.eva.domain.model.Save
 import com.grace.eva.presentation.component.chart.ActivitiesMapChart
 import com.grace.eva.presentation.component.ActivityCard
 import com.grace.eva.presentation.screen.floating.TemplateManagementScreen
@@ -67,23 +75,42 @@ fun TrackerScreenContent(viewModel: TrackerViewModel) {
     val currentSave = state.currentSave
     val activityTemplates = state.activityTemplates
 
-    // Save template management state
-    var isManagingTemplates by rememberSaveable { mutableStateOf(false) }
+    var showTemplatesScreen by rememberSaveable { mutableStateOf(false) }
 
-    if (isManagingTemplates) {
-        TemplateManagementScreen(
-            activityTemplates = activityTemplates,
-            viewModel = viewModel,
-            onClose = { isManagingTemplates = false }
-        )
-    } else {
-        MainTrackerContent(
-            currentSave = currentSave,
-            currentActivity = currentActivity,
-            activityTemplates = activityTemplates,
-            onManageTemplatesClick = { isManagingTemplates = true },
-            viewModel = viewModel
-        )
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Main content with fade animation when templates screen appears/disappears
+        AnimatedVisibility(
+            visible = !showTemplatesScreen,
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            MainTrackerContent(
+                currentSave = currentSave,
+                currentActivity = currentActivity,
+                activityTemplates = activityTemplates,
+                onManageTemplatesClick = { showTemplatesScreen = true },
+                viewModel = viewModel
+            )
+        }
+
+        // Templates screen with slide animation from right
+        AnimatedVisibility(
+            visible = showTemplatesScreen,
+            enter = slideInHorizontally(
+                initialOffsetX = { it },
+                animationSpec = androidx.compose.animation.core.tween(300)
+            ) + fadeIn(),
+            exit = slideOutHorizontally(
+                targetOffsetX = { it },
+                animationSpec = androidx.compose.animation.core.tween(300)
+            ) + fadeOut()
+        ) {
+            TemplateManagementScreen(
+                activityTemplates = activityTemplates,
+                viewModel = viewModel,
+                onClose = { showTemplatesScreen = false }
+            )
+        }
     }
 }
 
@@ -105,9 +132,8 @@ private fun MainTrackerContent(
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-            // Fixed top content
             Text(
-                text = "Текущая активность",
+                text = "Последняя активность",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(bottom = 16.dp)
@@ -127,7 +153,7 @@ private fun MainTrackerContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (isSaveActive) "Переключить активность" else "Сохранение завершено",
+                    text = "Переключить активность",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
@@ -146,7 +172,6 @@ private fun MainTrackerContent(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Activity templates
             if (activityTemplates.isNotEmpty()) {
                 val rows = activityTemplates.chunked(2)
 
@@ -154,7 +179,7 @@ private fun MainTrackerContent(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(rows) { row ->
                         Row(
@@ -170,14 +195,12 @@ private fun MainTrackerContent(
                                     modifier = Modifier.weight(1f),
                                     enabled = currentSave != null && isSaveActive,
                                     colors = ButtonDefaults.outlinedButtonColors(
-                                        containerColor =
-                                            MaterialTheme.colorScheme.surfaceContainer,
+                                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
                                         contentColor = MaterialTheme.colorScheme.onSecondaryContainer
                                     ),
                                     border = if (isCurrentActivity)
                                         BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-                                                else
-                                        null
+                                    else null
                                 ) {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
@@ -207,18 +230,13 @@ private fun MainTrackerContent(
                 EmptyTemplatesMessage(modifier = Modifier.fillMaxWidth())
             }
 
-            InfoMessages(
-                currentSave = currentSave,
-                isSaveActive = isSaveActive
-            )
-
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Timeline section - always at the bottom
             TimelineSection(
                 currentSave = currentSave,
                 isSaveActive = isSaveActive,
-                activityTemplates = activityTemplates
+                activityTemplates = activityTemplates,
+
             )
         }
     }
@@ -226,38 +244,23 @@ private fun MainTrackerContent(
 
 @Composable
 private fun TimelineSection(
-    currentSave: com.grace.eva.domain.model.Save?,
+    currentSave: Save?,
     isSaveActive: Boolean,
-    activityTemplates: List<com.grace.eva.domain.model.ActivityTemplate>
+    activityTemplates: List<ActivityTemplate>
 ) {
-    if (currentSave != null && currentSave.activities.isNotEmpty()) {
-        val sortedActivities = currentSave.activities.sortedBy { it.begin }
+
+        val activities = currentSave?.activities ?: mutableListOf()
 
         ActivitiesMapChart(
-            activities = sortedActivities,
+            activities = activities,
             isSaveCompleted = !isSaveActive,
-            saveEnd = currentSave.end,
+            saveEnd = currentSave?.end,
             getColorForActivity = { name ->
                 val template = activityTemplates.find { it.name == name }
                 parseColor(template?.color ?: "#2196F3") ?: Color(0xFF2196F3)
             },
             modifier = Modifier.fillMaxWidth()
         )
-    } else {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            )
-        ) {
-            Text(
-                text = "Нет данных для отображения",
-                modifier = Modifier.fillMaxWidth().padding(24.dp),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
 }
 
 @Composable
@@ -269,34 +272,19 @@ private fun EmptyTemplatesMessage(modifier: Modifier = Modifier) {
         )
     ) {
         Text(
-            text = "Нет шаблонов активностей. Добавьте их в настройках.",
+            text = "Начните с создания шаблона",
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@Composable
-private fun InfoMessages(
-    currentSave: com.grace.eva.domain.model.Save?,
-    isSaveActive: Boolean
-) {
-    if (currentSave == null) {
-        Text(
-            text = "Выберите сохранение в настройках",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.error,
-            modifier = Modifier.padding(top = 8.dp)
         )
     }
 }
 
 @Preview(showBackground = true)
 @Composable
-fun PreviewTrackerScreen() {
+fun TrackerScreenPreview() {
     val mockViewModel = remember {
         TrackerViewModel(appContainer = MockAppContainer(MockType.SIMPLE))
     }
@@ -306,7 +294,7 @@ fun PreviewTrackerScreen() {
 
 @Preview(showBackground = true)
 @Composable
-fun PreviewTrackerScreen_NoSave() {
+fun TrackerScreenEmptyPreview() {
     val mockViewModel = remember {
         TrackerViewModel(appContainer = MockAppContainer(MockType.EMPTY))
     }

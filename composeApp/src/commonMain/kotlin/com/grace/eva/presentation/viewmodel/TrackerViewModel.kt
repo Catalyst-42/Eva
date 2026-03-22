@@ -1,5 +1,6 @@
 package com.grace.eva.presentation.viewmodel
 
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -8,7 +9,9 @@ import com.grace.eva.di.AppContainer
 import com.grace.eva.domain.model.Activity
 import com.grace.eva.domain.model.ActivityTemplate
 import com.grace.eva.domain.model.Save
+import com.grace.eva.ui.theme.tracker.TemplateColors
 import com.grace.eva.util.formatTime
+import com.grace.eva.util.parseColor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,10 +23,8 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 
 data class TrackerUiState(
-    val allSaves: List<Save> = emptyList(),
-    val currentSave: Save? = null,
-    val activityTemplates: List<ActivityTemplate> = emptyList(),
-    val isLoading: Boolean = false
+    val allSaves: List<Save> = emptyList(), val currentSave: Save? = null,
+    val activityTemplates: List<ActivityTemplate> = emptyList(), val isLoading: Boolean = false
 )
 
 sealed class ValidationResult {
@@ -79,13 +80,6 @@ class TrackerViewModel(
         }
     }
 
-    fun onRenameSave(save: Save, newName: String) {
-        viewModelScope.launch {
-            val updatedSave = save.copy(name = newName)
-            appContainer.updateSaveUseCase(updatedSave)
-        }
-    }
-
     fun onCompleteSave(save: Save) {
         viewModelScope.launch {
             val updatedSave = save.copy(end = Clock.System.now())
@@ -100,25 +94,58 @@ class TrackerViewModel(
         }
     }
 
-    fun onUpdateSaveEndWithCallback(
-        save: Save, newEnd: Instant?, onError: (String) -> Unit, onSuccess: () -> Unit
-    ) {
+    fun onExportSave(save: Save) {
         viewModelScope.launch {
-            when (val result = validateSaveEnd(save, newEnd)) {
-                is ValidationResult.Success -> {
-                    val updatedSave = save.copy(end = newEnd)
-                    appContainer.updateSaveUseCase(updatedSave)
-                    onSuccess()
-                }
-
-                is ValidationResult.Error -> {
-                    onError(result.message)
-                }
-            }
+            appContainer.exportSaveUseCase(save)
         }
     }
 
-    // Activity logic - единый метод обновления
+    fun onImportSave() {
+        viewModelScope.launch {
+            appContainer.importSaveUseCase()
+        }
+    }
+
+    // Unified update method with callback
+    fun onUpdateSave(
+        save: Save, newName: String? = null, newEnd: Instant? = null, onError: (String) -> Unit,
+        onSuccess: () -> Unit
+    ) {
+        viewModelScope.launch {
+            // Validate end time if provided
+            if (newEnd != null) {
+                when (val result = validateSaveEnd(save, newEnd)) {
+                    is ValidationResult.Error -> {
+                        onError(result.message)
+                        return@launch
+                    }
+
+                    is ValidationResult.Success -> {
+                        // Continue validation
+                    }
+                }
+            }
+
+            // Build updated save
+            var updatedSave = save
+            if (newName != null && newName != save.name) {
+                updatedSave = updatedSave.copy(name = newName)
+            }
+            if (newEnd != null && newEnd != save.end) {
+                updatedSave = updatedSave.copy(end = newEnd)
+            } else if (newEnd == null && save.end != null) {
+                updatedSave = updatedSave.copy(end = null)
+            }
+
+            // Only update if something changed
+            if (updatedSave != save) {
+                appContainer.updateSaveUseCase(updatedSave)
+            }
+
+            onSuccess()
+        }
+    }
+    // Activity logic
     fun onUpdateActivity(
         activity: Activity, newName: String, newNote: String, newBegin: Instant,
         onError: (String) -> Unit, onSuccess: () -> Unit
@@ -173,26 +200,25 @@ class TrackerViewModel(
     }
 
     fun onUpdateActivityTemplate(
-        template: ActivityTemplate, newName: String, newColor: String, newIsHidden: Boolean
+        template: ActivityTemplate, newName: String, newColor: String, newIsHidden: Boolean,
+        onSuccess: () -> Unit
     ) {
         viewModelScope.launch {
-            val updatedTemplate =
-                template.copy(name = newName, color = newColor, isHidden = newIsHidden)
+            // Add validation if needed
+            val updatedTemplate = template.copy(
+                name = newName, color = newColor, isHidden = newIsHidden
+            )
             appContainer.updateActivityTemplateUseCase(updatedTemplate)
+            onSuccess()
         }
     }
 
-    // Sync logic
-    fun onExportSave(save: Save) {
-        viewModelScope.launch {
-            appContainer.exportSaveUseCase(save)
-        }
-    }
+    fun getColorForActivity(activityName: String): Color {
+        val templates = _uiState.value.activityTemplates
+        val template = templates.find { it.name == activityName }
+        val hexColor = template?.color ?: TemplateColors.getColorForIndex(0)
 
-    fun onImportSave() {
-        viewModelScope.launch {
-            appContainer.importSaveUseCase()
-        }
+        return parseColor(hexColor) ?: TemplateColors.getDefaultColor()
     }
 
     // Validation
@@ -241,10 +267,6 @@ class TrackerViewModel(
             currentSave.end != null -> currentSave.end
             else -> null
         }
-    }
-
-    fun isCurrentSaveCompleted(): Boolean {
-        return _uiState.value.currentSave?.end != null
     }
 
     @Suppress("UNCHECKED_CAST")

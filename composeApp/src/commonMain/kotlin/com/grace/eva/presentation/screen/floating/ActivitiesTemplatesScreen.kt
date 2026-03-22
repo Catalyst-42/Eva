@@ -10,15 +10,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -26,6 +22,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.grace.eva.di.MockAppContainer
@@ -37,16 +34,14 @@ import com.grace.eva.ui.theme.tracker.TemplateColors
 
 @Composable
 fun TemplateManagementScreen(
-    activityTemplates: List<ActivityTemplate>,
-    viewModel: TrackerViewModel,
-    onClose: () -> Unit
+    activityTemplates: List<ActivityTemplate>, viewModel: TrackerViewModel, onClose: () -> Unit
 ) {
+    val keyboardController = LocalSoftwareKeyboardController.current
+
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp)
-            .padding(top = 16.dp)
+        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp).padding(top = 16.dp)
     ) {
+        // Header
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -59,8 +54,10 @@ fun TemplateManagementScreen(
             )
 
             IconButton(
-                onClick = onClose,
-                modifier = Modifier.size(32.dp)
+                onClick = {
+                    keyboardController?.hide()
+                    onClose()
+                }, modifier = Modifier.size(32.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,
@@ -75,19 +72,21 @@ fun TemplateManagementScreen(
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(bottom = 16.dp)
         ) {
-            // Templates
+            // List of templates
             items(
                 items = activityTemplates,
                 key = { template -> template.id }
-            ) { template ->
+            ) {
+                template ->
                 TemplateCard(
                     template = template,
                     viewModel = viewModel
                 )
             }
 
-            // Add button as last item
+            // Button to add new
             item {
                 Button(
                     onClick = {
@@ -96,49 +95,10 @@ fun TemplateManagementScreen(
                         val newColor = TemplateColors.getColorForIndex(newIndex)
 
                         viewModel.onAddActivityTemplate(
-                            name = newTemplateName,
-                            color = newColor
+                            name = newTemplateName, color = newColor
                         )
-                    },
-                    modifier = Modifier.fillMaxWidth()
+                    }, modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Добавить шаблон")
-                }
-            }
-        }
-
-        // Empty state when no templates
-        if (activityTemplates.isEmpty()) {
-            Column {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-                    )
-                ) {
-                    Text(
-                        text = "Нет шаблонов. Создайте новый.",
-                        modifier = Modifier.padding(16.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Button(
-                    onClick = {
-                        val newIndex = activityTemplates.size
-                        val newTemplateName = "Активность ${newIndex + 1}"
-                        val newColor = TemplateColors.getColorForIndex(newIndex)
-
-                        viewModel.onAddActivityTemplate(
-                            name = newTemplateName,
-                            color = newColor
-                        )
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
                     Text("Добавить шаблон")
                 }
             }
@@ -148,19 +108,13 @@ fun TemplateManagementScreen(
 
 @Preview(showBackground = true)
 @Composable
-fun PreviewTemplateManagementScreen() {
-    val templates = listOf(
-        ActivityTemplate("Сон", "#2196F3"),
-        ActivityTemplate("Отдых", "#4CAF50"),
-        ActivityTemplate("Пары", "#FF9800"),
-        ActivityTemplate("Транспорт", "#FFC107"),
-        ActivityTemplate("Домашка", "#F44336")
+fun TemplateManagementScreenPreview() {
+    val mockViewModel = TrackerViewModel(
+        appContainer = MockAppContainer(MockType.SIMPLE)
     )
 
-    val mockViewModel = TrackerViewModel(appContainer = MockAppContainer(MockType.SIMPLE))
-
     TemplateManagementScreen(
-        activityTemplates = templates,
+        activityTemplates = mockViewModel.uiState.value.activityTemplates,
         viewModel = mockViewModel,
         onClose = {}
     )
@@ -168,11 +122,13 @@ fun PreviewTemplateManagementScreen() {
 
 @Preview(showBackground = true)
 @Composable
-fun PreviewTemplateManagementScreenEmpty() {
-    val mockViewModel = TrackerViewModel(appContainer = MockAppContainer(MockType.EMPTY))
+fun TemplateManagementScreenEmptyPreview() {
+    val mockViewModel = TrackerViewModel(
+        appContainer = MockAppContainer(MockType.EMPTY)
+    )
 
     TemplateManagementScreen(
-        activityTemplates = emptyList(),
+        activityTemplates = mockViewModel.uiState.value.activityTemplates,
         viewModel = mockViewModel,
         onClose = {}
     )

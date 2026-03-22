@@ -34,6 +34,8 @@ import platform.UIKit.UIApplication
 import platform.UIKit.UIDocumentPickerDelegateProtocol
 import platform.UIKit.UIDocumentPickerMode
 import platform.UIKit.UIDocumentPickerViewController
+import platform.UIKit.UIImpactFeedbackGenerator
+import platform.UIKit.UIImpactFeedbackStyle
 import platform.UIKit.UIViewController
 import platform.darwin.NSObject
 import kotlin.time.Clock
@@ -53,6 +55,14 @@ class TrackerRepositoryImpl : TrackerRepository {
 
     init {
         loadTrackerData()
+    }
+
+    private fun triggerHaptic() {
+        val generator = UIImpactFeedbackGenerator(
+            style = UIImpactFeedbackStyle.UIImpactFeedbackStyleMedium
+        )
+        generator.prepare()
+        generator.impactOccurred()
     }
 
     @OptIn(ExperimentalForeignApi::class)
@@ -96,6 +106,7 @@ class TrackerRepositoryImpl : TrackerRepository {
                 NSData.create(bytes = address, length = bytes.size.toULong())
             }
         }
+        triggerHaptic()
         return data.writeToFile(filePath, true)
     }
 
@@ -293,7 +304,7 @@ class TrackerRepositoryImpl : TrackerRepository {
         val topController = getTopViewController(rootViewController)
 
         topController?.presentViewController(
-           viewControllerToPresent = activityVC,
+            viewControllerToPresent = activityVC,
             animated = true,
             completion = null
         )
