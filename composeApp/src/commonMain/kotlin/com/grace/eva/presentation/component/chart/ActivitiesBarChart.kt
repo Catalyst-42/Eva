@@ -52,7 +52,7 @@ fun ActivitiesBarChart(
     val textMeasurer = rememberTextMeasurer()
     val textStyle = TextStyle(
         color = Color.Black,
-        fontSize = 10.sp
+        fontSize = 12.sp
     )
 
     Card(
@@ -92,6 +92,7 @@ fun ActivitiesBarChart(
                         size = Size(segmentWidth, size.height)
                     )
 
+                    // Outline
                     drawRect(
                         color = outlineColor,
                         topLeft = Offset(startX, 0f),
@@ -99,7 +100,7 @@ fun ActivitiesBarChart(
                         style = Stroke(width = 1.dp.toPx())
                     )
 
-                    // Draw percentage text if segment width is large enough (>10% of total)
+                    // Percentage
                     if (percentage > 10f) {
                         val percentageText = formatFloat(percentage, 1) + "%"
                         val textLayoutResult = textMeasurer.measure(

@@ -1,6 +1,8 @@
 package com.grace.eva.presentation.component
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,9 +12,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -25,8 +30,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.grace.eva.di.MockAppContainer
 import com.grace.eva.di.MockType
 import com.grace.eva.domain.model.ActivityTemplate
@@ -46,6 +54,9 @@ fun TemplateCard(
     var editedColor by remember(template.id, template.color) {
         mutableStateOf(template.color)
     }
+    var isHidden by remember(template.id, template.color) {
+        mutableStateOf(template.isHidden)
+    }
     var formatError by remember { mutableStateOf(false) }
     var validationError by remember { mutableStateOf<String?>(null) }
 
@@ -64,12 +75,22 @@ fun TemplateCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier
+                val circleModifier = if (template.isHidden) {
+                    Modifier .size(16.dp)
+                        .border(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant,
+                            shape = CircleShape
+                        )
+                } else {
+                    Modifier
                         .size(16.dp)
                         .clip(MaterialTheme.shapes.small)
-                        .background(parseColor(template.color) ?: MaterialTheme.colorScheme.surfaceVariant)
-                )
+                        .background(
+                           parseColor(template.color) ?:
+                            MaterialTheme.colorScheme.surfaceVariant)
+                }
+                Box(circleModifier)
 
                 Spacer(modifier = Modifier.size(12.dp))
 
@@ -77,7 +98,9 @@ fun TemplateCard(
                     text = template.name,
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    overflow = TextOverflow.Ellipsis,
+                    maxLines = 1
                 )
             }
 
@@ -117,6 +140,29 @@ fun TemplateCard(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable(
+                        onClick = {
+                            isHidden = !isHidden
+                        }
+                    )
+                ) {
+                    Checkbox(
+                        checked = isHidden,
+                        onCheckedChange = {
+                            isHidden = it
+                        }
+                    )
+
+                    Text("Скрывать на карте недели")
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -151,7 +197,8 @@ fun TemplateCard(
                                 template = template,
                                 newName = editedName,
                                 newColor = editedColor,
-                                newIsHidden = template.isHidden, onSuccess = {
+                                newIsHidden = isHidden,
+                                onSuccess = {
                                     validationError = null
                                 }
                             )
@@ -186,6 +233,23 @@ fun PreviewTemplateCardExpanded() {
     val template = ActivityTemplate(
         name = "Eva is Experiment version Android",
         color = "Broken one"
+    )
+    val mockViewModel = TrackerViewModel(appContainer = MockAppContainer(MockType.SIMPLE))
+
+    TemplateCard(
+        template = template,
+        viewModel = mockViewModel,
+        expanded = true
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewTemplateCardHidden() {
+    val template = ActivityTemplate(
+        name = "Hidden one",
+        color = "#FF00FF",
+        isHidden = true
     )
     val mockViewModel = TrackerViewModel(appContainer = MockAppContainer(MockType.SIMPLE))
 

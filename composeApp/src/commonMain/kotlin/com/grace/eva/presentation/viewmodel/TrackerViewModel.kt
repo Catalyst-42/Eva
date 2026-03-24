@@ -221,6 +221,14 @@ class TrackerViewModel(
         return parseColor(hexColor) ?: TemplateColors.getDefaultColor()
     }
 
+    fun getActivityTemplateIsHidden(activityName: String): Boolean {
+        val templates = _uiState.value.activityTemplates
+        val template = templates.find { it.name == activityName }
+        val isHidden = template?.isHidden ?: false
+
+        return isHidden
+    }
+
     // Validation
     fun validateActivityBegin(activity: Activity, newBegin: Instant): ValidationResult {
         val currentSave =

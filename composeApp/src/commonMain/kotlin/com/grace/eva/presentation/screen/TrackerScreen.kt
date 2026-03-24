@@ -1,42 +1,19 @@
 package com.grace.eva.presentation.screen
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.scrollable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,8 +28,8 @@ import com.grace.eva.di.MockType
 import com.grace.eva.domain.model.Activity
 import com.grace.eva.domain.model.ActivityTemplate
 import com.grace.eva.domain.model.Save
-import com.grace.eva.presentation.component.chart.ActivitiesMapChart
 import com.grace.eva.presentation.component.ActivityCard
+import com.grace.eva.presentation.component.chart.ActivitiesMapChart
 import com.grace.eva.presentation.screen.floating.TemplateManagementScreen
 import com.grace.eva.presentation.viewmodel.TrackerViewModel
 import com.grace.eva.util.parseColor
@@ -78,7 +55,6 @@ fun TrackerScreenContent(viewModel: TrackerViewModel) {
     var showTemplatesScreen by rememberSaveable { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Main content with fade animation when templates screen appears/disappears
         AnimatedVisibility(
             visible = !showTemplatesScreen,
             enter = fadeIn(),
@@ -93,7 +69,6 @@ fun TrackerScreenContent(viewModel: TrackerViewModel) {
             )
         }
 
-        // Templates screen with slide animation from right
         AnimatedVisibility(
             visible = showTemplatesScreen,
             enter = slideInHorizontally(
@@ -116,129 +91,144 @@ fun TrackerScreenContent(viewModel: TrackerViewModel) {
 
 @Composable
 private fun MainTrackerContent(
-    currentSave: com.grace.eva.domain.model.Save?,
-    currentActivity: com.grace.eva.domain.model.Activity?,
-    activityTemplates: List<com.grace.eva.domain.model.ActivityTemplate>,
+    currentSave: Save?,
+    currentActivity: Activity?,
+    activityTemplates: List<ActivityTemplate>,
     onManageTemplatesClick: () -> Unit,
     viewModel: TrackerViewModel
 ) {
     val isSaveActive = currentSave?.end == null
 
-    Box(
-        modifier = Modifier.fillMaxSize()
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp)
+        // Last activity
+        Text(
+            text = "Последняя активность",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+
+        ActivityCard(
+            activity = currentActivity,
+            viewModel = viewModel,
+            expanded = false
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Activity templates
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Последняя активность",
+                text = "Переключить активность",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(bottom = 16.dp)
             )
 
-            ActivityCard(
-                activity = currentActivity,
-                viewModel = viewModel,
-                expanded = false
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            IconButton(
+                onClick = onManageTemplatesClick,
+                modifier = Modifier.size(32.dp)
             ) {
-                Text(
-                    text = "Переключить активность",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
+                Icon(
+                    imageVector = Icons.Filled.Edit,
+                    contentDescription = "Управление шаблонами",
+                    modifier = Modifier.size(20.dp)
                 )
-
-                IconButton(
-                    onClick = onManageTemplatesClick,
-                    modifier = Modifier.size(32.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Edit,
-                        contentDescription = "Управление шаблонами",
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
             }
+        }
 
-            Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(158.dp)
+        ) {
             if (activityTemplates.isNotEmpty()) {
-                val rows = activityTemplates.chunked(2)
-
-                LazyColumn(
+                val rows = remember(activityTemplates) { activityTemplates.chunked(2) }
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(rows) { row ->
+                    rows.forEach { row ->
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
                             row.forEach { template ->
-                                val isCurrentActivity = currentActivity?.name == template.name
-                                val activityColor = parseColor(template.color) ?: Color.Transparent
+                        val isCurrentActivity = currentActivity?.name == template.name
 
-                                OutlinedButton(
-                                    onClick = { viewModel.onActivityTemplateSelected(template) },
-                                    modifier = Modifier.weight(1f),
-                                    enabled = currentSave != null && isSaveActive,
-                                    colors = ButtonDefaults.outlinedButtonColors(
-                                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                                    ),
-                                    border = if (isCurrentActivity)
-                                        BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-                                    else null
-                                ) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.Start
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(16.dp)
-                                                .clip(MaterialTheme.shapes.small)
-                                                .background(activityColor)
+                        OutlinedButton(
+                            onClick = { viewModel.onActivityTemplateSelected(template) },
+                            modifier = Modifier.weight(1f),
+                            enabled = currentSave != null && isSaveActive,
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                            ),
+                            border = if (isCurrentActivity || !isSaveActive)
+                                BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                            else null
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Start
+                            ) {
+                                val circleModifier = if (template.isHidden) {
+                                    Modifier .size(16.dp)
+                                        .border(
+                                            width = 1.dp,
+                                            color = MaterialTheme.colorScheme.outlineVariant,
+                                            shape = CircleShape
                                         )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text(
-                                            text = template.name,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                        )
-                                    }
+                                } else {
+                                    Modifier
+                                        .size(16.dp)
+                                        .clip(MaterialTheme.shapes.small)
+                                        .background(
+                                            parseColor(template.color) ?:
+                                            MaterialTheme.colorScheme.surfaceVariant)
                                 }
+                                Box(circleModifier)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = template.name,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        }
                             }
                             if (row.size == 1) Spacer(modifier = Modifier.weight(1f))
                         }
                     }
                 }
             } else {
-                EmptyTemplatesMessage(modifier = Modifier.fillMaxWidth())
+                EmptyTemplatesMessage(
+                    modifier = Modifier.fillMaxSize()
+                )
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            TimelineSection(
-                currentSave = currentSave,
-                isSaveActive = isSaveActive,
-                activityTemplates = activityTemplates,
-
-            )
         }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Timeline
+        TimelineSection(
+            currentSave = currentSave,
+            isSaveActive = isSaveActive,
+            viewModel = viewModel
+        )
     }
 }
 
@@ -246,21 +236,22 @@ private fun MainTrackerContent(
 private fun TimelineSection(
     currentSave: Save?,
     isSaveActive: Boolean,
-    activityTemplates: List<ActivityTemplate>
+    viewModel: TrackerViewModel
 ) {
+    val activities = currentSave?.activities ?: emptyList()
 
-        val activities = currentSave?.activities ?: mutableListOf()
-
-        ActivitiesMapChart(
-            activities = activities,
-            isSaveCompleted = !isSaveActive,
-            saveEnd = currentSave?.end,
-            getColorForActivity = { name ->
-                val template = activityTemplates.find { it.name == name }
-                parseColor(template?.color ?: "#2196F3") ?: Color(0xFF2196F3)
-            },
-            modifier = Modifier.fillMaxWidth()
-        )
+    ActivitiesMapChart(
+        activities = activities,
+        isSaveCompleted = !isSaveActive,
+        saveEnd = currentSave?.end,
+        getColorForActivity = { name ->
+            viewModel.getColorForActivity(name)
+        },
+        getActivityTemplateIsHidden = {
+            name -> viewModel.getActivityTemplateIsHidden(name)
+        },
+        modifier = Modifier.fillMaxWidth()
+    )
 }
 
 @Composable

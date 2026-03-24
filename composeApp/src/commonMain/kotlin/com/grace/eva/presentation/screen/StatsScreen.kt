@@ -1,9 +1,16 @@
 package com.grace.eva.presentation.screen
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.OverscrollEffect
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.ScrollableDefaults.overscrollEffect
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.overscroll
+import androidx.compose.foundation.rememberOverscrollEffect
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -185,7 +192,8 @@ fun StatsScreenContent(viewModel: TrackerViewModel) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(horizontal = 16.dp)
+            .padding(top = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         if (currentSave == null) {
@@ -300,33 +308,51 @@ fun ActivitySelectionSection(
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
-        // Buttons for activities in original order
-        buttonRows.forEach { row ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                row.forEach { stat ->
-                    val index = activityStats.indexOf(stat)
-                    val isSelected = selectedActivityName == stat.name
-                    val percentage = if (totalDuration.inWholeSeconds > 0) {
-                        (stat.totalDuration.inWholeSeconds.toFloat() / totalDuration.inWholeSeconds.toFloat()) * 100
-                    } else {
-                        0f
-                    }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(158.dp)
+        ) {
+            val overscrollEffect = rememberOverscrollEffect()
 
-                    ActivitySelectionButton(
-                        name = stat.name,
-                        color = getColorForActivity(stat.name, index),
-                        percentage = percentage,
-                        isSelected = isSelected,
-                        onClick = { onActivitySelected(stat.name) },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-                // Fill empty space if only one item in row
-                if (row.size == 1) {
-                    Spacer(modifier = Modifier.weight(1f))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(
+                        rememberScrollState(),
+                        overscrollEffect = overscrollEffect
+                    ),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                buttonRows.forEach { row ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        row.forEach { stat ->
+                            val index = activityStats.indexOf(stat)
+                            val isSelected = selectedActivityName == stat.name
+                            val percentage = if (totalDuration.inWholeSeconds > 0) {
+                                (stat.totalDuration.inWholeSeconds.toFloat() / totalDuration.inWholeSeconds.toFloat()) * 100
+                            } else {
+                                0f
+                            }
+
+                            ActivitySelectionButton(
+                                name = stat.name,
+                                color = getColorForActivity(stat.name, index),
+                                percentage = percentage,
+                                isSelected = isSelected,
+                                onClick = { onActivitySelected(stat.name) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+
+                        // Fill empty space if only one item in row
+                        if (row.size == 1) {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
                 }
             }
         }
@@ -412,7 +438,7 @@ fun StatisticsCard(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = "${stat.name}",
+                text = stat.name,
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(bottom = 8.dp)

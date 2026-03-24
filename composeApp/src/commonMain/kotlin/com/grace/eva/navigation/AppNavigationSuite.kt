@@ -17,9 +17,7 @@ import com.grace.eva.ui.theme.EvaTheme
 
 @Composable
 fun AppNavigationSuite(
-    navController: NavHostController,
-    onNavigate: (String) -> Unit,
-    content: @Composable () -> Unit
+    navController: NavHostController, onNavigate: (String) -> Unit, content: @Composable () -> Unit
 ) {
     val currentBackStack by navController.currentBackStackEntryAsState()
     val currentRoute = currentBackStack?.destination?.route

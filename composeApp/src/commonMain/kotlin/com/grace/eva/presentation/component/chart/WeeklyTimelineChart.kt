@@ -50,7 +50,8 @@ data class TimeSegment(
     val color: Color,
     val activity: Activity,
     val duration: Long,
-    val isActive: Boolean = false
+    val isActive: Boolean = false,
+    val isHidden: Boolean = false  // Added field for hidden segments
 )
 
 data class DayTimeline(
@@ -64,6 +65,7 @@ fun ActivitiesMapChart(
     isSaveCompleted: Boolean,
     saveEnd: Instant? = null,
     getColorForActivity: (String) -> Color,
+    getActivityTemplateIsHidden: (String) -> Boolean,  // New parameter to get isHidden from template
     modifier: Modifier = Modifier
 ) {
     if (activities.isEmpty()) return
@@ -155,6 +157,7 @@ fun ActivitiesMapChart(
             isSaveCompleted = isSaveCompleted,
             saveEnd = saveEnd,
             getColorForActivity = getColorForActivity,
+            getActivityTemplateIsHidden = getActivityTemplateIsHidden,
             weekDays = weekDays,
             timeZone = timeZone
         )
@@ -314,21 +317,25 @@ private fun WeekDayBar(
                 val y = barBottomY * (1 - (hour / 24f))
 
                 val isOverlapping = if (timelineData.segments.isNotEmpty()) {
-                    val firstSegment = timelineData.segments.first()
-                    val lastSegment = timelineData.segments.last()
+                    val firstVisibleSegment = timelineData.segments.firstOrNull { !it.isHidden }
+                    val lastVisibleSegment = timelineData.segments.lastOrNull { !it.isHidden }
 
-                    val firstStartY = barBottomY * (1 - (firstSegment.startHour / 24f))
-                    val firstEndY = barBottomY * (1 - (firstSegment.endHour / 24f))
-                    val lastStartY = barBottomY * (1 - (lastSegment.startHour / 24f))
-                    val lastEndY = barBottomY * (1 - (lastSegment.endHour / 24f))
+                    if (firstVisibleSegment != null && lastVisibleSegment != null) {
+                        val firstStartY = barBottomY * (1 - (firstVisibleSegment.startHour / 24f))
+                        val firstEndY = barBottomY * (1 - (firstVisibleSegment.endHour / 24f))
+                        val lastStartY = barBottomY * (1 - (lastVisibleSegment.startHour / 24f))
+                        val lastEndY = barBottomY * (1 - (lastVisibleSegment.endHour / 24f))
 
-                    val firstTop = minOf(firstStartY, firstEndY)
-                    val firstBottom = maxOf(firstStartY, firstEndY)
-                    val lastTop = minOf(lastStartY, lastEndY)
-                    val lastBottom = maxOf(lastStartY, lastEndY)
+                        val firstTop = minOf(firstStartY, firstEndY)
+                        val firstBottom = maxOf(firstStartY, firstEndY)
+                        val lastTop = minOf(lastStartY, lastEndY)
+                        val lastBottom = maxOf(lastStartY, lastEndY)
 
-                    y in (firstTop - 1.dp.toPx())..(firstBottom + 1.dp.toPx()) ||
-                            y in (lastTop - 1.dp.toPx())..(lastBottom + 1.dp.toPx())
+                        y in (firstTop - 1.dp.toPx())..(firstBottom + 1.dp.toPx()) ||
+                                y in (lastTop - 1.dp.toPx())..(lastBottom + 1.dp.toPx())
+                    } else {
+                        false
+                    }
                 } else {
                     false
                 }
@@ -348,21 +355,25 @@ private fun WeekDayBar(
                 val y = barBottomY * (1 - (hour / 24f))
 
                 val isOverlapping = if (timelineData.segments.isNotEmpty()) {
-                    val firstSegment = timelineData.segments.first()
-                    val lastSegment = timelineData.segments.last()
+                    val firstVisibleSegment = timelineData.segments.firstOrNull { !it.isHidden }
+                    val lastVisibleSegment = timelineData.segments.lastOrNull { !it.isHidden }
 
-                    val firstStartY = barBottomY * (1 - (firstSegment.startHour / 24f))
-                    val firstEndY = barBottomY * (1 - (firstSegment.endHour / 24f))
-                    val lastStartY = barBottomY * (1 - (lastSegment.startHour / 24f))
-                    val lastEndY = barBottomY * (1 - (lastSegment.endHour / 24f))
+                    if (firstVisibleSegment != null && lastVisibleSegment != null) {
+                        val firstStartY = barBottomY * (1 - (firstVisibleSegment.startHour / 24f))
+                        val firstEndY = barBottomY * (1 - (firstVisibleSegment.endHour / 24f))
+                        val lastStartY = barBottomY * (1 - (lastVisibleSegment.startHour / 24f))
+                        val lastEndY = barBottomY * (1 - (lastVisibleSegment.endHour / 24f))
 
-                    val firstTop = minOf(firstStartY, firstEndY)
-                    val firstBottom = maxOf(firstStartY, firstEndY)
-                    val lastTop = minOf(lastStartY, lastEndY)
-                    val lastBottom = maxOf(lastStartY, lastEndY)
+                        val firstTop = minOf(firstStartY, firstEndY)
+                        val firstBottom = maxOf(firstStartY, firstEndY)
+                        val lastTop = minOf(lastStartY, lastEndY)
+                        val lastBottom = maxOf(lastStartY, lastEndY)
 
-                    y in (firstTop - 1.dp.toPx())..(firstBottom + 1.dp.toPx()) ||
-                            y in (lastTop - 1.dp.toPx())..(lastBottom + 1.dp.toPx())
+                        y in (firstTop - 1.dp.toPx())..(firstBottom + 1.dp.toPx()) ||
+                                y in (lastTop - 1.dp.toPx())..(lastBottom + 1.dp.toPx())
+                    } else {
+                        false
+                    }
                 } else {
                     false
                 }
@@ -402,67 +413,73 @@ private fun WeekDayBar(
                 }
             }
 
-            // Draw segments (bars)
+            // Draw segments (bars) - skip hidden segments
             timelineData.segments.forEach { segment ->
-                val startY = barBottomY * (1 - (segment.startHour / 24f))
-                val endY = barBottomY * (1 - (segment.endHour / 24f))
-                val height = startY - endY
+                if (!segment.isHidden) {
+                    val startY = barBottomY * (1 - (segment.startHour / 24f))
+                    val endY = barBottomY * (1 - (segment.endHour / 24f))
+                    val height = startY - endY
 
-                if (height > 0) {
-                    drawRect(
-                        color = segment.color,
-                        topLeft = Offset(0f, endY),
-                        size = Size(size.width, height)
-                    )
-                }
-            }
-
-            // Draw segment outlines
-            timelineData.segments.forEach { segment ->
-                val startY = barBottomY * (1 - (segment.startHour / 24f))
-                val endY = barBottomY * (1 - (segment.endHour / 24f))
-                val height = startY - endY
-
-                if (height > 0) {
-                    drawRect(
-                        color = outlineColor,
-                        topLeft = Offset(0f, endY),
-                        size = Size(size.width, height),
-                        style = Stroke(width = 1.dp.toPx())
-                    )
-                }
-            }
-
-            // Draw duration text for long segments
-            timelineData.segments.forEach { segment ->
-                val startY = barBottomY * (1 - (segment.startHour / 24f))
-                val endY = barBottomY * (1 - (segment.endHour / 24f))
-                val height = startY - endY
-                val durationHours = segment.duration / 3600f
-
-                if (height > 0 && durationHours >= 1.5) {
-                    val duration = segment.duration.toDuration(DurationUnit.SECONDS)
-                    val text = formatDuration(duration)
-
-                    drawIntoCanvas { canvas ->
-                        val textLayoutResult = textMeasurer.measure(
-                            text = text,
-                            style = TextStyle(
-                                fontSize = 10.sp,
-                                textAlign = TextAlign.Center,
-                                color = Color.Black
-                            )
+                    if (height > 0) {
+                        drawRect(
+                            color = segment.color,
+                            topLeft = Offset(0f, endY),
+                            size = Size(size.width, height)
                         )
+                    }
+                }
+            }
 
-                        val centerX = size.width / 2
-                        val centerY = endY + (height / 2) - (textLayoutResult.size.height / 2)
+            // Draw segment outlines - skip hidden segments
+            timelineData.segments.forEach { segment ->
+                if (!segment.isHidden) {
+                    val startY = barBottomY * (1 - (segment.startHour / 24f))
+                    val endY = barBottomY * (1 - (segment.endHour / 24f))
+                    val height = startY - endY
 
-                        canvas.nativeCanvas.apply {
-                            drawText(
-                                textLayoutResult = textLayoutResult,
-                                topLeft = Offset(centerX - textLayoutResult.size.width / 2, centerY),
-                                color = Color.Black
+                    if (height > 0) {
+                        drawRect(
+                            color = outlineColor,
+                            topLeft = Offset(0f, endY),
+                            size = Size(size.width, height),
+                            style = Stroke(width = 1.dp.toPx())
+                        )
+                    }
+                }
+            }
+
+            // Draw duration text for long segments - skip hidden segments
+            timelineData.segments.forEach { segment ->
+                if (!segment.isHidden) {
+                    val startY = barBottomY * (1 - (segment.startHour / 24f))
+                    val endY = barBottomY * (1 - (segment.endHour / 24f))
+                    val height = startY - endY
+                    val durationHours = segment.duration / 3600f
+
+                    if (height > 0 && durationHours >= 1.5) {
+                        val duration = segment.duration.toDuration(DurationUnit.SECONDS)
+                        val text = formatDuration(duration)
+
+                        drawIntoCanvas { canvas ->
+                            val textLayoutResult = textMeasurer.measure(
+                                text = text,
+                                style = TextStyle(
+                                    fontSize = 10.sp,
+                                    textAlign = TextAlign.Center,
+                                    color = Color.Black
+                                )
                             )
+
+                            val centerX = size.width / 2
+                            val centerY = endY + (height / 2) - (textLayoutResult.size.height / 2)
+
+                            canvas.nativeCanvas.apply {
+                                drawText(
+                                    textLayoutResult = textLayoutResult,
+                                    topLeft = Offset(centerX - textLayoutResult.size.width / 2, centerY),
+                                    color = Color.Black
+                                )
+                            }
                         }
                     }
                 }
@@ -488,6 +505,7 @@ private fun buildWeekDaysTimeline(
     isSaveCompleted: Boolean,
     saveEnd: Instant?,
     getColorForActivity: (String) -> Color,
+    getActivityTemplateIsHidden: (String) -> Boolean,  // New parameter
     weekDays: List<LocalDate>,
     timeZone: TimeZone
 ): List<DayTimeline> {
@@ -511,6 +529,9 @@ private fun buildWeekDaysTimeline(
     relevantActivities.forEachIndexed { index, activity ->
         val isLastActivity = index == relevantActivities.lastIndex
         val isActiveSegment = isLastActivity && !isSaveCompleted
+
+        // Get isHidden from activity template
+        val isHidden = getActivityTemplateIsHidden(activity.name)
 
         val endTime = when {
             index < relevantActivities.lastIndex -> relevantActivities[index + 1].begin
@@ -556,7 +577,8 @@ private fun buildWeekDaysTimeline(
                         color = getColorForActivity(activity.name),
                         activity = activity,
                         duration = duration,
-                        isActive = isActiveSegment && currentDate == endDateTime.date
+                        isActive = isActiveSegment && currentDate == endDateTime.date,
+                        isHidden = isHidden  // Set isHidden from template
                     )
                 )
                 break
@@ -573,7 +595,8 @@ private fun buildWeekDaysTimeline(
                         color = getColorForActivity(activity.name),
                         activity = activity,
                         duration = duration,
-                        isActive = false
+                        isActive = false,
+                        isHidden = isHidden  // Set isHidden from template
                     )
                 )
                 currentStart = midnight
@@ -610,6 +633,7 @@ private fun PreviewActivitiesMapChart() {
                 isSaveCompleted = currentSave?.end != null,
                 saveEnd = currentSave?.end,
                 getColorForActivity = { name -> mockViewModel.getColorForActivity(name) },
+                getActivityTemplateIsHidden = { name -> mockViewModel.getActivityTemplateIsHidden(name) },
                 modifier = Modifier.fillMaxWidth()
             )
         }

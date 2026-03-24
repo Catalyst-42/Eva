@@ -168,7 +168,7 @@ private fun SaveCardForm(
     isCurrentSave: Boolean,
     viewModel: TrackerViewModel
 ) {
-    var endText by remember(editedEnd) { mutableStateOf(editedEnd?.let { formatTime(it) } ?: "Нет") }
+    var endText by remember(editedEnd) { mutableStateOf(editedEnd?.let { formatTime(it) } ?: "") }
     var formatError by remember { mutableStateOf(false) }
     var validationError by remember { mutableStateOf<String?>(null) }
 
@@ -185,7 +185,7 @@ private fun SaveCardForm(
         )
 
         OutlinedTextField(
-            value = endText,
+            value = endText.ifBlank { "Нет" },
             onValueChange = { endText = it },
             label = { Text("Завершено") },
             modifier = Modifier.fillMaxWidth(),
@@ -343,7 +343,7 @@ fun PreviewSaveCard() {
 fun PreviewSaveCardExpanded() {
     val mockViewModel = remember {
         TrackerViewModel(
-            appContainer = MockAppContainer(MockType.LARGE)
+            appContainer = MockAppContainer(MockType.SIMPLE)
         )
     }
 

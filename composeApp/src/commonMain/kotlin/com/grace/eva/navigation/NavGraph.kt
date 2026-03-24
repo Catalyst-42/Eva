@@ -25,18 +25,6 @@ import com.grace.eva.presentation.screen.SettingsScreen
 import com.grace.eva.presentation.screen.StatsScreen
 import com.grace.eva.presentation.screen.TrackerScreen
 
-enum class Screen(
-    val route: String,
-    val icon: ImageVector,
-    val label: String,
-    val order: Int
-) {
-    Tracker("tracker", Icons.Default.PlayArrow, "Трекер", 0),
-    Activities("activities", Icons.Default.Menu, "Активности", 1),
-    Stats("stats", Icons.Default.Info, "Статистика", 2),
-    Settings("settings", Icons.Default.Settings, "Настройки", 3)
-}
-
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun NavGraph(
