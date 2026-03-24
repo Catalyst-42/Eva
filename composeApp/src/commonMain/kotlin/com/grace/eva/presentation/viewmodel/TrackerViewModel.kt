@@ -213,9 +213,15 @@ class TrackerViewModel(
         }
     }
 
-    fun getColorForActivity(activityName: String): Color {
+    fun getTemplateForActivity(activityName: String): ActivityTemplate? {
         val templates = _uiState.value.activityTemplates
         val template = templates.find { it.name == activityName }
+
+        return template
+    }
+
+    fun getColorForActivity(activityName: String): Color {
+        val template = getTemplateForActivity(activityName)
         val hexColor = template?.color ?: TemplateColors.getColorForIndex(0)
 
         return parseColor(hexColor) ?: TemplateColors.getDefaultColor()

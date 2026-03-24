@@ -1,5 +1,6 @@
 package com.grace.eva.presentation.component
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -9,7 +10,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -30,6 +33,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.grace.eva.di.MockAppContainer
 import com.grace.eva.di.MockType
+import com.grace.eva.domain.model.ActivityTemplate
 import com.grace.eva.presentation.viewmodel.TrackerViewModel
 import com.grace.eva.util.formatDuration
 import com.grace.eva.util.formatTime
@@ -81,6 +85,7 @@ fun ActivityCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
+                .animateContentSize()
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -95,7 +100,6 @@ fun ActivityCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-
                 Text(
                     text = formatTime(activity.begin, "dd.mm HH:MM:SS"),
                     style = MaterialTheme.typography.bodyMedium,
@@ -107,6 +111,7 @@ fun ActivityCard(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
@@ -118,7 +123,14 @@ fun ActivityCard(
                     modifier = Modifier.weight(1f)
                 )
 
-                // Isolated duration text that updates independently
+                ActivityIcon(
+                    viewModel.getTemplateForActivity(activity.name)
+                        ?: ActivityTemplate(),
+                    6.dp
+                )
+
+                Spacer(modifier = Modifier.width(8.dp))
+
                 ActivityDurationText(
                     activity = activity,
                     isActivityActive = isActivityActive,
@@ -138,8 +150,11 @@ fun ActivityCard(
                     onNoteChange = { editedNote = it },
                     viewModel = viewModel,
                     onSaveSuccess = {
-                        // Keep the card expanded after successful save
-                        // isExpanded remains true, no change
+                        isExpanded = false
+                    },
+                    onDelete = {
+                        viewModel.onRemoveActivity(activity)
+                        isExpanded = false
                     }
                 )
             }
@@ -212,7 +227,8 @@ private fun ActivityCardControls(
     onNameChange: (String) -> Unit,
     onNoteChange: (String) -> Unit,
     viewModel: TrackerViewModel,
-    onSaveSuccess: () -> Unit
+    onSaveSuccess: () -> Unit,
+    onDelete: () -> Unit
 ) {
     var beginText by remember(activity.begin) { mutableStateOf(formatTime(activity.begin)) }
     var formatError by remember { mutableStateOf(false) }
@@ -263,11 +279,16 @@ private fun ActivityCardControls(
         modifier = Modifier.fillMaxWidth()
     ) {
         OutlinedButton(
-            onClick = { viewModel.onRemoveActivity(activity) },
+            onClick = {
+                onDelete()
+          },
             modifier = Modifier.weight(1f),
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = MaterialTheme.colorScheme.error
+            ),
             border = BorderStroke(
                 width = 1.dp,
-                color = MaterialTheme.colorScheme.outline
+                color = MaterialTheme.colorScheme.error
             )
         ) {
             Text("Удалить")
@@ -298,7 +319,7 @@ private fun ActivityCardControls(
                     }
                 )
             },
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(2f)
         ) {
             Text("Сохранить")
         }

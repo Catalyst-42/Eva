@@ -1,5 +1,7 @@
 package com.grace.eva.presentation.component
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -15,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -61,7 +64,9 @@ fun TemplateCard(
     var validationError by remember { mutableStateOf<String?>(null) }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .animateContentSize(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         ),
@@ -75,22 +80,7 @@ fun TemplateCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                val circleModifier = if (template.isHidden) {
-                    Modifier .size(16.dp)
-                        .border(
-                            width = 1.dp,
-                            color = MaterialTheme.colorScheme.outlineVariant,
-                            shape = CircleShape
-                        )
-                } else {
-                    Modifier
-                        .size(16.dp)
-                        .clip(MaterialTheme.shapes.small)
-                        .background(
-                           parseColor(template.color) ?:
-                            MaterialTheme.colorScheme.surfaceVariant)
-                }
-                Box(circleModifier)
+                ActivityIcon(template)
 
                 Spacer(modifier = Modifier.size(12.dp))
 
@@ -170,6 +160,13 @@ fun TemplateCard(
                         onClick = {
                             viewModel.onRemoveActivityTemplate(template)
                         },
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        ),
+                        border = BorderStroke(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.error
+                        ),
                         modifier = Modifier.weight(1f)
                     ) {
                         Text("Удалить")
@@ -203,7 +200,7 @@ fun TemplateCard(
                                 }
                             )
                         },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(2f),
                         enabled = editedName.isNotBlank()
                     ) {
                         Text("Сохранить")

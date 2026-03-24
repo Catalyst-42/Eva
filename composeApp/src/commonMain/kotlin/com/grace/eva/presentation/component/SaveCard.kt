@@ -1,21 +1,46 @@
 package com.grace.eva.presentation.component
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.Divider
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Attribution
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Mode
+import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Shower
+import androidx.compose.material.icons.filled.UnfoldMoreDouble
+import androidx.compose.material3.DividerDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MenuDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -69,7 +94,9 @@ fun SaveCard(
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .animateContentSize(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer
         ),
@@ -234,91 +261,151 @@ private fun SaveCardActions(
     onEndSaved: (Instant?) -> Unit,
     viewModel: TrackerViewModel
 ) {
-    Button(
-        onClick = { viewModel.onExportSave(save) },
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Text("Экспортировать")
-    }
-
-    Spacer(modifier = Modifier.height(8.dp))
+    var menuExpanded by remember { mutableStateOf(false) }
+    val isSaveActive = save.end == null
 
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Button(
-            onClick = {
-                if (save.end == null) {
-                    viewModel.onCompleteSave(save)
+        Box {
+            IconButton(
+                onClick = { menuExpanded = true }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = "Действия"
+                )
+            }
+
+            DropdownMenu(
+                expanded = menuExpanded,
+                onDismissRequest = { menuExpanded = false },
+                modifier = Modifier
+            ) {
+                // End save
+                if (isSaveActive) {
+                    DropdownMenuItem(
+                        text = { Text("Завершить сохранение") },
+                        onClick = {
+                            viewModel.onCompleteSave(save)
+                            menuExpanded = false
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null
+                            )
+                        }
+                    )
                 } else {
-                    viewModel.onContinueSave(save)
-                }
-            },
-            modifier = Modifier.weight(1f)
-        ) {
-            Text(if (save.end == null) "Завершить" else "Продолжить")
-        }
-
-        Button(
-            onClick = { viewModel.onSetCurrentSave(save) },
-            modifier = Modifier.weight(1f),
-            enabled = !isCurrentSave
-        ) {
-            Text(if (isCurrentSave) "Загружено" else "Загрузить")
-        }
-    }
-
-    Spacer(modifier = Modifier.height(8.dp))
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        OutlinedButton(
-            onClick = { viewModel.onDeleteSave(save) },
-            modifier = Modifier.weight(1f)
-        ) {
-            Text("Удалить")
-        }
-
-        Button(
-            onClick = {
-                // Parse time and validate
-                var newEnd: Instant? = null
-
-                if (endText.isNotBlank()) {
-                    val parsed = parseInstant(endText)
-                    if (parsed == null) {
-                        onFormatError()
-                        return@Button
-                    }
-                    onFormatSuccess()
-                    newEnd = parsed
+                    DropdownMenuItem(
+                        text = { Text("Продолжить сохранение") },
+                        onClick = {
+                            viewModel.onContinueSave(save)
+                            menuExpanded = false
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.PlayArrow,
+                                contentDescription = null
+                            )
+                        }
+                    )
                 }
 
-                // Update save
-                viewModel.onUpdateSave(
-                    save = save,
-                    newName = editedName,
-                    newEnd = newEnd,
-                    onError = { errorMessage ->
-                        onValidationError(errorMessage)
+                // Export
+                DropdownMenuItem(
+                    text = { Text("Экспортировать сохранение") },
+                    onClick = {
+                        viewModel.onExportSave(save)
+                        menuExpanded = false
                     },
-                    onSuccess = {
-                        onValidationSuccess()
-                        if (editedName != save.name) {
-                            onNameSaved(editedName)
-                        }
-                        if (newEnd != save.end) {
-                            onEndSaved(newEnd)
-                        }
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = null
+                        )
                     }
                 )
-            },
-            modifier = Modifier.weight(1f)
-        ) {
-            Text("Сохранить")
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 8.dp),
+                    thickness = DividerDefaults.Thickness,
+                    color = DividerDefaults.color
+                )
+
+                // Delete
+                DropdownMenuItem(
+                    text = { Text("Удалить сохранение") },
+                    onClick = {
+                        viewModel.onDeleteSave(save)
+                        menuExpanded = false
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    },
+                    colors = MenuDefaults.itemColors(
+                        leadingIconColor = MaterialTheme.colorScheme.error
+                    )
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        // Save and load
+        if (isCurrentSave) {
+            Button(
+                onClick = {
+                    // Parse time and validate
+                    var newEnd: Instant? = null
+
+                    if (endText.isNotBlank()) {
+                        val parsed = parseInstant(endText)
+                        if (parsed == null) {
+                            onFormatError()
+                            return@Button
+                        }
+                        onFormatSuccess()
+                        newEnd = parsed
+                    }
+
+                    // Update save
+                    viewModel.onUpdateSave(
+                        save = save,
+                        newName = editedName,
+                        newEnd = newEnd,
+                        onError = { errorMessage ->
+                            onValidationError(errorMessage)
+                        },
+                        onSuccess = {
+                            onValidationSuccess()
+                            if (editedName != save.name) {
+                                onNameSaved(editedName)
+                            }
+                            if (newEnd != save.end) {
+                                onEndSaved(newEnd)
+                            }
+                        }
+                    )
+                },
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("Сохранить")
+            }
+        } else {
+            Button(
+                onClick = { viewModel.onSetCurrentSave(save) },
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("Загрузить")
+            }
         }
     }
 }

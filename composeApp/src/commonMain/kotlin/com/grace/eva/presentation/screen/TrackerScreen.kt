@@ -29,6 +29,7 @@ import com.grace.eva.domain.model.Activity
 import com.grace.eva.domain.model.ActivityTemplate
 import com.grace.eva.domain.model.Save
 import com.grace.eva.presentation.component.ActivityCard
+import com.grace.eva.presentation.component.ActivityIcon
 import com.grace.eva.presentation.component.chart.ActivitiesMapChart
 import com.grace.eva.presentation.screen.floating.TemplateManagementScreen
 import com.grace.eva.presentation.viewmodel.TrackerViewModel
@@ -105,13 +106,18 @@ private fun MainTrackerContent(
             .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
-        // Last activity
-        Text(
-            text = "Последняя активность",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            // Last activity
+            Text(
+                text = "Последняя активность",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
 
         ActivityCard(
             activity = currentActivity,
@@ -185,22 +191,7 @@ private fun MainTrackerContent(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.Start
                             ) {
-                                val circleModifier = if (template.isHidden) {
-                                    Modifier .size(16.dp)
-                                        .border(
-                                            width = 1.dp,
-                                            color = MaterialTheme.colorScheme.outlineVariant,
-                                            shape = CircleShape
-                                        )
-                                } else {
-                                    Modifier
-                                        .size(16.dp)
-                                        .clip(MaterialTheme.shapes.small)
-                                        .background(
-                                            parseColor(template.color) ?:
-                                            MaterialTheme.colorScheme.surfaceVariant)
-                                }
-                                Box(circleModifier)
+                                ActivityIcon(template)
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = template.name,

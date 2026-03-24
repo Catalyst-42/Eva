@@ -24,6 +24,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.grace.eva.di.AppContainer
 import com.grace.eva.di.MockAppContainer
 import com.grace.eva.di.MockType
+import com.grace.eva.domain.model.ActivityTemplate
+import com.grace.eva.presentation.component.ActivityIcon
 import com.grace.eva.presentation.component.chart.ActivitiesBarChart
 import com.grace.eva.presentation.component.chart.ChartSegment
 import com.grace.eva.presentation.viewmodel.TrackerViewModel
@@ -249,7 +251,8 @@ fun StatsScreenContent(viewModel: TrackerViewModel) {
                     activityStats = activityStats,
                     buttonRows = buttonRows,
                     totalDuration = totalDuration,
-                    getColorForActivity = { name, index -> getColorForActivity(name, index) }
+                    getColorForActivity = { name, index -> getColorForActivity(name, index) },
+                    viewModel = viewModel
                 )
             }
 
@@ -296,7 +299,8 @@ fun ActivitySelectionSection(
     activityStats: List<ActivityStat>,
     buttonRows: List<List<ActivityStat>>,
     totalDuration: Duration,
-    getColorForActivity: (String, Int) -> Color
+    getColorForActivity: (String, Int) -> Color,
+    viewModel: TrackerViewModel
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -344,7 +348,8 @@ fun ActivitySelectionSection(
                                 percentage = percentage,
                                 isSelected = isSelected,
                                 onClick = { onActivitySelected(stat.name) },
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
+                                viewModel = viewModel
                             )
                         }
 
@@ -366,7 +371,8 @@ fun ActivitySelectionButton(
     percentage: Float,
     isSelected: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: TrackerViewModel
 ) {
     OutlinedButton(
         onClick = onClick,
@@ -385,12 +391,7 @@ fun ActivitySelectionButton(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Box(
-                modifier = Modifier
-                    .size(16.dp)
-                    .clip(MaterialTheme.shapes.small)
-                    .background(color)
-            )
+            ActivityIcon(viewModel.getTemplateForActivity(name) ?: ActivityTemplate())
             Text(
                 text = name,
                 maxLines = 1,
