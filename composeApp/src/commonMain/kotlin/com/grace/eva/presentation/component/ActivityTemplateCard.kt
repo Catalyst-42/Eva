@@ -199,6 +199,8 @@ fun TemplateCard(
                                     validationError = null
                                 }
                             )
+
+                            isExpanded = false
                         },
                         modifier = Modifier.weight(2f),
                         enabled = editedName.isNotBlank()

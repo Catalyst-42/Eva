@@ -1,3 +1,20 @@
+# Eva
+Time tracker with stages for iOS and Android.
+
+## Features
+- Stage-based time tracking - create custom stages and track time
+- Multiple save slots - switch between projects or contexts
+- Full data ownership - all data stored locally
+- Export & import - backup or transfer your saves
+- No gaps - data stored only with activity begin timestamps
+- Statistics - view plot of week by stages and total information about save
+
+## Screenshots
+| ![Main](img/main.png)   | ![Activities](img/activities.png) |
+|-------------------------|-----------------------------------|
+| ![Stats](img/stats.png) | ![Settings](img/settings.png)     |
+
+## Development
 This is a Kotlin Multiplatform project targeting Android, iOS.
 
 * [/composeApp](./composeApp/src) is for code that will be shared across your Compose Multiplatform applications.
@@ -12,8 +29,7 @@ This is a Kotlin Multiplatform project targeting Android, iOS.
 * [/iosApp](./iosApp/iosApp) contains iOS applications. Even if you’re sharing your UI with Compose Multiplatform,
   you need this entry point for your iOS app. This is also where you should add SwiftUI code for your project.
 
-### Build and Run Android Application
-
+## Build and Run Android Application
 To build and run the development version of the Android app, use the run configuration from the run widget
 in your IDE’s toolbar or build it directly from the terminal:
 - on macOS/Linux
@@ -25,13 +41,6 @@ in your IDE’s toolbar or build it directly from the terminal:
   .\gradlew.bat :composeApp:assembleDebug
   ```
 
-### Build and Run iOS Application
-
+## Build and Run iOS Application
 To build and run the development version of the iOS app, use the run configuration from the run widget
 in your IDE’s toolbar or open the [/iosApp](./iosApp) directory in Xcode and run it from there.
-
----
-
-Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html)…
-
-### 

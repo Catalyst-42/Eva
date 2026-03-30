@@ -123,6 +123,8 @@ fun ActivityCard(
                     modifier = Modifier.weight(1f)
                 )
 
+                Spacer(modifier = Modifier.width(8.dp))
+
                 ActivityIcon(
                     viewModel.getTemplateForActivity(activity.name)
                         ?: ActivityTemplate(),

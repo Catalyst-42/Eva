@@ -19,6 +19,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextLayoutInput
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -304,116 +307,96 @@ private fun WeekDayBar(
         modifier = modifier
             .fillMaxWidth()
     ) {
+        // Prepare bounds for all labels
+        val hours = listOf(0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24)
+        val hourTextLayouts: Map<Int, TextLayoutResult> = remember {
+            hours.associateWith { hour ->
+                textMeasurer.measure(
+                    text = hour.toString(),
+                    style = TextStyle(
+                        fontSize = 8.sp,
+                        textAlign = TextAlign.Center,
+                        color = gridColor
+                    )
+                )
+            }
+        }
+
         Canvas(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(barHeight)
         ) {
             val barBottomY = size.height
-            val hours = listOf(0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24)
 
             // Draw grid lines
+            // Precompute visible segments bounds once
+            val visibleSegments = timelineData.segments.filter { !it.isHidden }
+            val firstVisible = visibleSegments.firstOrNull()
+            val lastVisible = visibleSegments.lastOrNull()
+
+            // Precompute Y bounds for overlapping check
+            var firstTop = 0f
+            var firstBottom = 0f
+            var lastTop = 0f
+            var lastBottom = 0f
+            if (firstVisible != null && lastVisible != null) {
+                val firstStartY = barBottomY * (1 - (firstVisible.startHour / 24f))
+                val firstEndY = barBottomY * (1 - (firstVisible.endHour / 24f))
+                val lastStartY = barBottomY * (1 - (lastVisible.startHour / 24f))
+                val lastEndY = barBottomY * (1 - (lastVisible.endHour / 24f))
+                firstTop = minOf(firstStartY, firstEndY)
+                firstBottom = maxOf(firstStartY, firstEndY)
+                lastTop = minOf(lastStartY, lastEndY)
+                lastBottom = maxOf(lastStartY, lastEndY)
+            }
+
+
             hours.forEach { hour ->
                 val y = barBottomY * (1 - (hour / 24f))
 
-                val isOverlapping = if (timelineData.segments.isNotEmpty()) {
-                    val firstVisibleSegment = timelineData.segments.firstOrNull { !it.isHidden }
-                    val lastVisibleSegment = timelineData.segments.lastOrNull { !it.isHidden }
-
-                    if (firstVisibleSegment != null && lastVisibleSegment != null) {
-                        val firstStartY = barBottomY * (1 - (firstVisibleSegment.startHour / 24f))
-                        val firstEndY = barBottomY * (1 - (firstVisibleSegment.endHour / 24f))
-                        val lastStartY = barBottomY * (1 - (lastVisibleSegment.startHour / 24f))
-                        val lastEndY = barBottomY * (1 - (lastVisibleSegment.endHour / 24f))
-
-                        val firstTop = minOf(firstStartY, firstEndY)
-                        val firstBottom = maxOf(firstStartY, firstEndY)
-                        val lastTop = minOf(lastStartY, lastEndY)
-                        val lastBottom = maxOf(lastStartY, lastEndY)
-
-                        y in (firstTop - 1.dp.toPx())..(firstBottom + 1.dp.toPx()) ||
-                                y in (lastTop - 1.dp.toPx())..(lastBottom + 1.dp.toPx())
-                    } else {
-                        false
-                    }
+                // Check overlap with first and last visible segments
+                val isOverlapping = if (firstVisible != null && lastVisible != null) {
+                    y in (firstTop - 1.dp.toPx())..(firstBottom + 1.dp.toPx()) ||
+                            y in (lastTop - 1.dp.toPx())..(lastBottom + 1.dp.toPx())
                 } else {
                     false
                 }
 
                 if (!isOverlapping) {
+                    // Draw grid line
                     drawLine(
                         color = gridColor,
                         start = Offset(0f, y),
                         end = Offset(size.width, y),
                         strokeWidth = 0.5.dp.toPx()
                     )
+
+                    val textLayoutResult = hourTextLayouts[hour]!!
+
+                    // Draw hour label
+                    val centerX = size.width / 2
+                    val centerY = y - (textLayoutResult.size.height / 2)
+                    val left = centerX - textLayoutResult.size.width / 2 - 2.dp.toPx()
+                    val top = centerY - 1.dp.toPx()
+                    val right = centerX + textLayoutResult.size.width / 2 + 2.dp.toPx()
+                    val bottom = centerY + textLayoutResult.size.height + 1.dp.toPx()
+
+                    drawRect(
+                        color = backgroundColor,
+                        topLeft = Offset(left, top),
+                        size = Size(right - left, bottom - top)
+                    )
+
+                    drawText(
+                        textLayoutResult = textLayoutResult,
+                        topLeft = Offset(centerX - textLayoutResult.size.width / 2, centerY),
+                        color = gridColor
+                    )
                 }
             }
 
-            // Draw hour labels
-            hours.forEach { hour ->
-                val y = barBottomY * (1 - (hour / 24f))
-
-                val isOverlapping = if (timelineData.segments.isNotEmpty()) {
-                    val firstVisibleSegment = timelineData.segments.firstOrNull { !it.isHidden }
-                    val lastVisibleSegment = timelineData.segments.lastOrNull { !it.isHidden }
-
-                    if (firstVisibleSegment != null && lastVisibleSegment != null) {
-                        val firstStartY = barBottomY * (1 - (firstVisibleSegment.startHour / 24f))
-                        val firstEndY = barBottomY * (1 - (firstVisibleSegment.endHour / 24f))
-                        val lastStartY = barBottomY * (1 - (lastVisibleSegment.startHour / 24f))
-                        val lastEndY = barBottomY * (1 - (lastVisibleSegment.endHour / 24f))
-
-                        val firstTop = minOf(firstStartY, firstEndY)
-                        val firstBottom = maxOf(firstStartY, firstEndY)
-                        val lastTop = minOf(lastStartY, lastEndY)
-                        val lastBottom = maxOf(lastStartY, lastEndY)
-
-                        y in (firstTop - 1.dp.toPx())..(firstBottom + 1.dp.toPx()) ||
-                                y in (lastTop - 1.dp.toPx())..(lastBottom + 1.dp.toPx())
-                    } else {
-                        false
-                    }
-                } else {
-                    false
-                }
-
-                if (!isOverlapping) {
-                    drawIntoCanvas { canvas ->
-                        val text = "${hour}"
-                        val textLayoutResult = textMeasurer.measure(
-                            text = text,
-                            style = TextStyle(
-                                fontSize = 8.sp,
-                                textAlign = TextAlign.Center,
-                                color = gridColor
-                            )
-                        )
-
-                        val centerX = size.width / 2
-                        val centerY = y - (textLayoutResult.size.height / 2)
-                        val left = centerX - textLayoutResult.size.width / 2 - 2.dp.toPx()
-                        val top = centerY - 1.dp.toPx()
-                        val right = centerX + textLayoutResult.size.width / 2 + 2.dp.toPx()
-                        val bottom = centerY + textLayoutResult.size.height + 1.dp.toPx()
-
-                        canvas.nativeCanvas.apply {
-                            drawRect(
-                                color = backgroundColor,
-                                topLeft = Offset(left, top),
-                                size = Size(right - left, bottom - top)
-                            )
-                            drawText(
-                                textLayoutResult = textLayoutResult,
-                                topLeft = Offset(centerX - textLayoutResult.size.width / 2, centerY),
-                                color = gridColor
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Draw segments (bars) - skip hidden segments
+            // Draw segments
             timelineData.segments.forEach { segment ->
                 if (!segment.isHidden) {
                     val startY = barBottomY * (1 - (segment.startHour / 24f))
