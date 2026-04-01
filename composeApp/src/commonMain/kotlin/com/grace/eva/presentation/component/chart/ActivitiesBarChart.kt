@@ -39,14 +39,10 @@ data class ChartSegment(
 fun ActivitiesBarChart(
     data: List<ChartSegment>,
     totalActivities: Int? = null,
+    totalDuration: Duration,
     modifier: Modifier = Modifier,
     showStatsRow: Boolean = true
 ) {
-    // Calculate total duration from provided data
-    val totalDuration = remember(data) {
-        data.sumOf { it.duration.inWholeSeconds }.seconds
-    }
-
     if (data.isEmpty()) return
 
     val textMeasurer = rememberTextMeasurer()
@@ -67,7 +63,6 @@ fun ActivitiesBarChart(
                 .fillMaxWidth()
                 .padding(vertical = 8.dp)
         ) {
-            // Bar chart canvas with percentage labels
             val outlineColor = Color.Black
             val backgroundColor = MaterialTheme.colorScheme.surface
 
@@ -80,19 +75,17 @@ fun ActivitiesBarChart(
                 val barWidth = size.width
                 var startX = 0f
 
-                data.forEachIndexed { index, segment ->
+                data.forEach { segment ->
                     val weight = segment.duration.inWholeSeconds.toFloat() / totalDuration.inWholeSeconds.toFloat()
                     val segmentWidth = barWidth * weight
                     val percentage = (segment.duration.inWholeSeconds.toFloat() / totalDuration.inWholeSeconds.toFloat()) * 100
 
-                    // Draw the bar segment
                     drawRect(
                         color = segment.color,
                         topLeft = Offset(startX, 0f),
                         size = Size(segmentWidth, size.height)
                     )
 
-                    // Outline
                     drawRect(
                         color = outlineColor,
                         topLeft = Offset(startX, 0f),
@@ -100,7 +93,6 @@ fun ActivitiesBarChart(
                         style = Stroke(width = 1.dp.toPx())
                     )
 
-                    // Percentage
                     if (percentage > 10f) {
                         val percentageText = formatFloat(percentage, 1) + "%"
                         val textLayoutResult = textMeasurer.measure(
@@ -168,12 +160,14 @@ private fun ActivitiesBarChartPreview() {
             color = mockViewModel.getColorForActivity(name)
         )
     }
+    val totalDuration = chartData.sumOf { it.duration.inWholeSeconds }.seconds
 
     MaterialTheme {
         Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
             ActivitiesBarChart(
                 data = chartData,
                 totalActivities = activities.size,
+                totalDuration = totalDuration,
                 modifier = Modifier.fillMaxWidth()
             )
         }

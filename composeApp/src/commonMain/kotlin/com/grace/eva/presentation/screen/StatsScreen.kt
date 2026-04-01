@@ -85,16 +85,11 @@ fun StatsScreenContent(viewModel: TrackerViewModel) {
         }
     }
 
-    // Keep activities in their original order (by begin time)
-    val orderedActivities = remember(activities) {
-        activities.sortedBy { it.begin }
-    }
-
     // Calculate detailed statistics for each activity, preserving order of first occurrence
-    val activityStats = remember(orderedActivities, currentTime, currentSave) {
-        val activitiesWithDuration = orderedActivities.mapIndexed { index, activity ->
+    val activityStats = remember(activities, currentTime, currentSave) {
+        val activitiesWithDuration = activities.mapIndexed { index, activity ->
             val endTime = when {
-                index < orderedActivities.lastIndex -> orderedActivities[index + 1].begin
+                index < activities.lastIndex -> activities[index + 1].begin
                 isSaveCompleted -> currentSave.end
                 else -> currentTime
             }
@@ -131,8 +126,8 @@ fun StatsScreenContent(viewModel: TrackerViewModel) {
             .sortedBy { it.firstOccurrenceIndex }
     }
 
-    val totalDuration = if (isSaveCompleted && orderedActivities.isNotEmpty()) {
-        currentSave.end - orderedActivities.first().begin
+    val totalDuration = if (isSaveCompleted && activities.isNotEmpty()) {
+        currentSave.end - activities.first().begin
     } else {
         activityStats.sumOf { it.totalDuration.inWholeSeconds }.seconds
     }
@@ -142,12 +137,12 @@ fun StatsScreenContent(viewModel: TrackerViewModel) {
     }
 
     // Calculate number of days in the save period
-    val totalDays = remember(currentSave, orderedActivities, currentTime) {
-        if (currentSave != null && orderedActivities.isNotEmpty()) {
-            val startTime = orderedActivities.first().begin
+    val totalDays = remember(currentSave, activities, currentTime) {
+        if (currentSave != null && activities.isNotEmpty()) {
+            val startTime = activities.first().begin
             val endTime = currentSave.end ?: currentTime
-            val days = (endTime - startTime).inWholeDays.toDouble()
-            if (days > 0) days else 1.0
+            val totalSeconds = (endTime - startTime).inWholeSeconds.toDouble()
+            if (totalSeconds > 0) totalSeconds / 86400.0 else 1.0
         } else {
             1.0
         }
@@ -239,7 +234,8 @@ fun StatsScreenContent(viewModel: TrackerViewModel) {
             item {
                 DensitySection(
                     chartData = chartData,
-                    totalActivities = totalActivities
+                    totalActivities = totalActivities,
+                    totalSaveDuration = totalDuration
                 )
             }
 
@@ -274,7 +270,8 @@ fun StatsScreenContent(viewModel: TrackerViewModel) {
 @Composable
 fun DensitySection(
     chartData: List<ChartSegment>,
-    totalActivities: Int
+    totalActivities: Int,
+    totalSaveDuration: Duration
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -287,6 +284,7 @@ fun DensitySection(
         ActivitiesBarChart(
             data = chartData,
             totalActivities = totalActivities,
+            totalDuration = totalSaveDuration,
             modifier = Modifier.fillMaxWidth()
         )
     }
