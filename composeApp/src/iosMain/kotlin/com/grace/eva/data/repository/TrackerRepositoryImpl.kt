@@ -1,5 +1,6 @@
 package com.grace.eva.data.repository
 
+import com.grace.eva.di.IosRootController
 import com.grace.eva.domain.model.Activity
 import com.grace.eva.domain.model.ActivityTemplate
 import com.grace.eva.domain.model.Save
@@ -13,17 +14,21 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import platform.Foundation.NSData
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
+import platform.Foundation.NSItemProvider
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
+import platform.Foundation.NSURL
 import platform.Foundation.NSUserDomainMask
 import platform.Foundation.create
 import platform.Foundation.dataWithContentsOfFile
@@ -50,8 +55,6 @@ class TrackerRepositoryImpl : TrackerRepository {
         prettyPrint = true
         ignoreUnknownKeys = true
     }
-
-    private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     init {
         loadTrackerData()
@@ -287,105 +290,33 @@ class TrackerRepositoryImpl : TrackerRepository {
     override suspend fun exportSave(save: Save) {
         val filePath = getSaveFilePath(save.id) ?: return
 
-        // Ensure file exists
         val fileManager = NSFileManager.defaultManager
         if (!fileManager.fileExistsAtPath(filePath)) {
             writeSaveToFile(save)
         }
 
-        val fileURL = platform.Foundation.NSURL.fileURLWithPath(filePath)
+        val fileURL = NSURL.fileURLWithPath(filePath)
 
         val activityVC = UIActivityViewController(
-            activityItems = listOf(fileURL), applicationActivities = null
+            activityItems = listOf(fileURL),
+            applicationActivities = null
         )
 
-        val keyWindow = UIApplication.sharedApplication.keyWindow
-        val rootViewController = keyWindow?.rootViewController
-        val topController = getTopViewController(rootViewController)
+        withContext(Dispatchers.Main) {
+            delay(100)
 
-        topController?.presentViewController(
-            viewControllerToPresent = activityVC,
-            animated = true,
-            completion = null
-        )
+            val topController = IosRootController.rootViewController ?: return@withContext
+
+            topController.presentViewController(
+                viewControllerToPresent = activityVC,
+                animated = true,
+                completion = null
+            )
+        }
     }
 
     override suspend fun importSave() {
-        val documentPicker = UIDocumentPickerViewController(
-            documentTypes = listOf("public.json"),
-            inMode = UIDocumentPickerMode.UIDocumentPickerModeImport
-        ).apply {
-            allowsMultipleSelection = false
-
-            val delegate = object : NSObject(), UIDocumentPickerDelegateProtocol {
-                override fun documentPicker(
-                    controller: UIDocumentPickerViewController, didPickDocumentsAtURLs: List<*>
-                ) {
-                    val url =
-                        didPickDocumentsAtURLs.firstOrNull() as? platform.Foundation.NSURL ?: return
-
-                    val didStartAccessing = url.startAccessingSecurityScopedResource()
-
-                    try {
-                        val path = url.path ?: return
-                        val jsonString = readFromFile(path) ?: return
-
-                        val importedSave = json.decodeFromString<Save>(jsonString)
-
-                        val newSave = Save(
-                            name = importedSave.name,
-                            activities = importedSave.activities.map { activity ->
-                                Activity(
-                                    name = activity.name,
-                                    note = activity.note,
-                                    begin = activity.begin
-                                )
-                            }.toMutableList(),
-                            end = importedSave.end
-                        )
-
-                        val existingWithSameName = _allSaves.value.find { it.name == newSave.name }
-                        val finalName = if (existingWithSameName != null) {
-                            "${newSave.name} (${Clock.System.now().epochSeconds})"
-                        } else {
-                            newSave.name
-                        }
-
-                        val saveToAdd = newSave.copy(name = finalName)
-
-                        repositoryScope.launch {
-                            ensureSavesDirectoryExists()
-                            writeSaveToFile(saveToAdd)
-                            _allSaves.update { it + saveToAdd }
-                            saveTrackerConfig()
-                        }
-
-                    } finally {
-                        if (didStartAccessing) {
-                            url.stopAccessingSecurityScopedResource()
-                        }
-                    }
-                }
-
-                override fun documentPickerWasCancelled(
-                    controller: UIDocumentPickerViewController
-                ) {
-                    // Cancel
-                }
-            }
-
-            this.delegate = delegate
-        }
-
-        val keyWindow = UIApplication.sharedApplication.keyWindow
-        val rootViewController = keyWindow?.rootViewController
-        val topController = getTopViewController(rootViewController)
-
-        topController?.presentViewController(
-            viewControllerToPresent = documentPicker,
-            animated = true,
-            completion = null
-        )
+        // TODO: Make
     }
 
     private fun getTopViewController(controller: UIViewController?): UIViewController? {

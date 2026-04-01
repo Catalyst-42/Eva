@@ -1,5 +1,5 @@
 # Eva
-Time tracker with stages for iOS and Android.
+Open any activity time tracker for iOS and Android with statistics and save management.
 
 ## Features
 - Stage-based time tracking - create custom stages and track time

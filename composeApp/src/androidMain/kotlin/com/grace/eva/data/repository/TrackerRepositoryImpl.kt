@@ -1,18 +1,23 @@
 package com.grace.eva.data.repository
 
 import android.content.Context
+import androidx.core.content.FileProvider
 import com.grace.eva.domain.model.Activity
 import com.grace.eva.domain.model.ActivityTemplate
 import com.grace.eva.domain.model.Save
 import com.grace.eva.domain.model.Tracker
 import com.grace.eva.domain.repository.TrackerRepository
+import kotlinx.coroutines.CancellableContinuation
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import java.io.File
+import kotlin.coroutines.resume
 
 private const val TRACKER_CONFIG_FILE = "tracker.json"
 private const val SAVES_DIRECTORY = "saves"
@@ -213,10 +218,34 @@ class TrackerRepositoryImpl(
     }
 
     override suspend fun exportSave(save: Save) {
-        // TODO: Open export menu of selected save file
+        val file = getSaveFile(save.id)
+
+        // Ensure file exists
+        if (!file.exists()) {
+            writeSaveToFile(save)
+        }
+
+        withContext(Dispatchers.Main) {
+            val uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                file
+            )
+
+            val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                type = "application/json"
+                putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+
+            val chooser = android.content.Intent.createChooser(intent, "Export Save")
+            chooser.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+
+            context.startActivity(chooser)
+        }
     }
 
     override suspend fun importSave() {
-        // TODO: Load file from popup menu
+        // TODO: Make
     }
 }

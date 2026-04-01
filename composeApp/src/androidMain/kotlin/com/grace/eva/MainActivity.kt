@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.grace.eva.di.createAndroidAppContainer
+import com.grace.eva.util.AndroidActivityHolder
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -12,6 +13,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         val appContainer = createAndroidAppContainer(this)
+        AndroidActivityHolder.currentActivity = this
 
         setContent {
             App(appContainer = appContainer)
