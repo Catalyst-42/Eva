@@ -7,6 +7,10 @@ import com.grace.eva.domain.model.ActivityTemplate
 import com.grace.eva.domain.model.Save
 import com.grace.eva.domain.model.Tracker
 import com.grace.eva.domain.repository.TrackerRepository
+import io.github.vinceglb.filekit.FileKit
+import io.github.vinceglb.filekit.dialogs.FileKitType
+import io.github.vinceglb.filekit.dialogs.openFilePicker
+import io.github.vinceglb.filekit.readString
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -18,6 +22,9 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import java.io.File
 import kotlin.coroutines.resume
+import kotlin.time.Clock
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 private const val TRACKER_CONFIG_FILE = "tracker.json"
 private const val SAVES_DIRECTORY = "saves"
@@ -245,7 +252,26 @@ class TrackerRepositoryImpl(
         }
     }
 
+    @OptIn(ExperimentalUuidApi::class)
     override suspend fun importSave() {
-        // TODO: Make
+        try {
+            val platformFile = FileKit.openFilePicker(
+                type = FileKitType.File(),
+            ) ?: return
+
+            val jsonString = platformFile.readString()
+            val importedSave = json.decodeFromString<Save>(jsonString)
+
+            val newSave = importedSave.copy(
+                id = Uuid.random().toString(),
+            )
+
+            writeSaveToFile(newSave)
+            _allSaves.update { it + newSave }
+            saveTrackerConfig()
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 }

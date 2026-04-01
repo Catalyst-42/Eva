@@ -52,6 +52,9 @@ kotlin {
             // implementation("org.jetbrains.androidx.compose.material3:material3-adaptive-navigation-suite:1.0.0-alpha07")
             implementation("org.jetbrains.compose.material3:material3-adaptive-navigation-suite:1.9.0")
             implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.7.1")
+            implementation("io.github.vinceglb:filekit-core:0.13.0")
+            implementation("io.github.vinceglb:filekit-dialogs:0.13.0")
+            implementation("io.github.vinceglb:filekit-dialogs-compose:0.13.0")
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

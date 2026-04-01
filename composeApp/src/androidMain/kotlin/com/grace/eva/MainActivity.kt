@@ -5,7 +5,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.grace.eva.di.createAndroidAppContainer
-import com.grace.eva.util.AndroidActivityHolder
+import io.github.vinceglb.filekit.FileKit
+import io.github.vinceglb.filekit.dialogs.init
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -13,7 +14,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         val appContainer = createAndroidAppContainer(this)
-        AndroidActivityHolder.currentActivity = this
+        FileKit.init(this)
 
         setContent {
             App(appContainer = appContainer)

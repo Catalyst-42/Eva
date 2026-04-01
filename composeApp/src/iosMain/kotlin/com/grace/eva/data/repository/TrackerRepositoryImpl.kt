@@ -6,6 +6,10 @@ import com.grace.eva.domain.model.ActivityTemplate
 import com.grace.eva.domain.model.Save
 import com.grace.eva.domain.model.Tracker
 import com.grace.eva.domain.repository.TrackerRepository
+import io.github.vinceglb.filekit.FileKit
+import io.github.vinceglb.filekit.dialogs.FileKitType
+import io.github.vinceglb.filekit.dialogs.openFilePicker
+import io.github.vinceglb.filekit.readString
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
@@ -44,6 +48,8 @@ import platform.UIKit.UIImpactFeedbackStyle
 import platform.UIKit.UIViewController
 import platform.darwin.NSObject
 import kotlin.time.Clock
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 private const val TRACKER_CONFIG_FILE = "tracker.json"
 private const val SAVES_DIRECTORY = "saves"
@@ -315,15 +321,26 @@ class TrackerRepositoryImpl : TrackerRepository {
         }
     }
 
+    @OptIn(ExperimentalUuidApi::class)
     override suspend fun importSave() {
-        // TODO: Make
-    }
+        try {
+            val platformFile = FileKit.openFilePicker(
+                type = FileKitType.File(),
+            ) ?: return
 
-    private fun getTopViewController(controller: UIViewController?): UIViewController? {
-        if (controller == null) return null
-        if (controller.presentedViewController != null) {
-            return getTopViewController(controller.presentedViewController)
+            val jsonString = platformFile.readString()
+            val importedSave = json.decodeFromString<Save>(jsonString)
+
+            val newSave = importedSave.copy(
+                id = Uuid.random().toString(),
+            )
+
+            writeSaveToFile(newSave)
+            _allSaves.update { it + newSave }
+            saveTrackerConfig()
+
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
-        return controller
     }
 }
