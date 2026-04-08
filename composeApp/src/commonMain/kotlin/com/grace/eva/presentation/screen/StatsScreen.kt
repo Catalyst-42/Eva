@@ -85,8 +85,8 @@ fun StatsScreenContent(viewModel: TrackerViewModel) {
         }
     }
 
-    // Calculate detailed statistics for each activity, preserving order of first occurrence
-    val activityStats = remember(activities, currentTime, currentSave) {
+    // Calculate activity durations first, then exclude hidden activities from stats
+    val visibleActivitiesWithDuration = remember(activities, currentTime, currentSave, state.activityTemplates) {
         val activitiesWithDuration = activities.mapIndexed { index, activity ->
             val endTime = when {
                 index < activities.lastIndex -> activities[index + 1].begin
@@ -97,11 +97,17 @@ fun StatsScreenContent(viewModel: TrackerViewModel) {
             activity.name to duration
         }
 
-        // Group by activity name and calculate stats, tracking first occurrence index
+        activitiesWithDuration.filter { (name, duration) ->
+            duration > Duration.ZERO && !viewModel.getActivityTemplateIsHidden(name)
+        }
+    }
+
+    // Group by activity name and calculate stats, preserving first visible occurrence order
+    val activityStats = remember(visibleActivitiesWithDuration) {
         val statsMap = mutableMapOf<String, MutableList<Duration>>()
         val firstOccurrence = mutableMapOf<String, Int>()
 
-        activitiesWithDuration.forEachIndexed { index, (name, duration) ->
+        visibleActivitiesWithDuration.forEachIndexed { index, (name, duration) ->
             statsMap.getOrPut(name) { mutableListOf() }.add(duration)
             if (!firstOccurrence.containsKey(name)) {
                 firstOccurrence[name] = index
@@ -122,13 +128,10 @@ fun StatsScreenContent(viewModel: TrackerViewModel) {
                 firstOccurrenceIndex = firstOccurrence[name] ?: Int.MAX_VALUE
             )
         }
-            .filter { it.totalDuration > Duration.ZERO }
             .sortedBy { it.firstOccurrenceIndex }
     }
 
-    val totalDuration = if (isSaveCompleted && activities.isNotEmpty()) {
-        currentSave.end - activities.first().begin
-    } else {
+    val totalDuration = remember(activityStats) {
         activityStats.sumOf { it.totalDuration.inWholeSeconds }.seconds
     }
 
@@ -168,6 +171,11 @@ fun StatsScreenContent(viewModel: TrackerViewModel) {
 
     // State for selected activity
     var selectedActivityName by remember { mutableStateOf<String?>(activityStats.firstOrNull()?.name) }
+    LaunchedEffect(activityStats) {
+        if (selectedActivityName == null || activityStats.none { it.name == selectedActivityName }) {
+            selectedActivityName = activityStats.firstOrNull()?.name
+        }
+    }
 
     // Find selected activity stat
     val selectedStat = activityStats.find { it.name == selectedActivityName }

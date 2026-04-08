@@ -1,6 +1,8 @@
 package com.grace.eva.presentation.component.chart
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -16,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
@@ -186,21 +189,17 @@ fun ActivitiesMapChart(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(
-                    onClick = { if (currentWeekOffset > 0) currentWeekOffset-- },
+                RepeatableIconButton(
+                    onStep = { if (currentWeekOffset > 0) currentWeekOffset-- },
                     enabled = currentWeekOffset > 0,
+                    icon = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Предыдущая неделя",
+                    tint = if (currentWeekOffset > 0)
+                        MaterialTheme.colorScheme.onSurface
+                    else
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                     modifier = Modifier.size(32.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Предыдущая неделя",
-                        modifier = Modifier.size(20.dp),
-                        tint = if (currentWeekOffset > 0)
-                            MaterialTheme.colorScheme.onSurface
-                        else
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                    )
-                }
+                )
 
                 Text(
                     text = "${currentWeekOffset + 1} из $totalWeeks",
@@ -208,21 +207,17 @@ fun ActivitiesMapChart(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                IconButton(
-                    onClick = { if (currentWeekOffset < totalWeeks - 1) currentWeekOffset++ },
+                RepeatableIconButton(
+                    onStep = { if (currentWeekOffset < totalWeeks - 1) currentWeekOffset++ },
                     enabled = currentWeekOffset < totalWeeks - 1,
+                    icon = Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = "Следующая неделя",
+                    tint = if (currentWeekOffset < totalWeeks - 1)
+                        MaterialTheme.colorScheme.onSurface
+                    else
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                     modifier = Modifier.size(32.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = "Следующая неделя",
-                        modifier = Modifier.size(20.dp),
-                        tint = if (currentWeekOffset < totalWeeks - 1)
-                            MaterialTheme.colorScheme.onSurface
-                        else
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                    )
-                }
+                )
             }
         }
 
@@ -243,6 +238,53 @@ fun ActivitiesMapChart(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun RepeatableIconButton(
+    onStep: () -> Unit,
+    enabled: Boolean,
+    icon: ImageVector,
+    contentDescription: String,
+    tint: Color,
+    modifier: Modifier = Modifier,
+    initialDelayMillis: Long = 350L,
+    repeatIntervalMillis: Long = 140L
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressedState = interactionSource.collectIsPressedAsState()
+    var repeatedDuringCurrentPress by remember { mutableStateOf(false) }
+
+    LaunchedEffect(enabled, isPressedState.value) {
+        if (!enabled || !isPressedState.value) {
+            repeatedDuringCurrentPress = false
+            return@LaunchedEffect
+        }
+
+        delay(initialDelayMillis)
+        while (enabled && isPressedState.value) {
+            repeatedDuringCurrentPress = true
+            onStep()
+            delay(repeatIntervalMillis)
+        }
+    }
+
+    IconButton(
+        onClick = {
+            if (!repeatedDuringCurrentPress) onStep()
+            repeatedDuringCurrentPress = false
+        },
+        enabled = enabled,
+        interactionSource = interactionSource,
+        modifier = modifier
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            modifier = Modifier.size(20.dp),
+            tint = tint
+        )
     }
 }
 

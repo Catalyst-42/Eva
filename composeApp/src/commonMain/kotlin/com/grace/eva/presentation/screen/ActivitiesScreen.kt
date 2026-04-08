@@ -27,7 +27,10 @@ import com.grace.eva.di.MockType
 import com.grace.eva.presentation.component.ActivityCard
 import com.grace.eva.presentation.viewmodel.TrackerViewModel
 import com.grace.eva.util.formatTime
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun ActivitiesScreen(
@@ -43,33 +46,41 @@ fun ActivitiesScreen(
 @Composable
 fun ActivityScreenContent(viewModel: TrackerViewModel) {
     val state by viewModel.uiState.collectAsState()
+    val currentSaveId = state.currentSave?.id
 
     // Safe handling of currentSave
     val activities = state.currentSave?.activities ?: emptyList()
 
-    var searchQuery by rememberSaveable { mutableStateOf("") }
+    var searchQuery by rememberSaveable(currentSaveId) { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val scrollState = rememberLazyListState()
 
     val focusManager = LocalFocusManager.current
 
-    // Get all activities sorted chronologically for time calculation context
-    val allActivitiesSorted = remember(activities) {
-        activities.sortedByDescending { it.begin }
+    var debouncedSearchQuery by remember(currentSaveId) { mutableStateOf(searchQuery) }
+
+    LaunchedEffect(searchQuery) {
+        delay(300)
+        debouncedSearchQuery = searchQuery
     }
 
-    // Filter activities based on search query
-    val filteredActivities = remember(searchQuery, activities) {
-        val filtered = if (searchQuery.isBlank()) {
-            activities
-        } else {
-            activities.filter { activity ->
-                activity.name.contains(searchQuery, ignoreCase = true) ||
-                activity.note.contains(searchQuery, ignoreCase = true) ||
-                formatTime(activity.begin, "dd.mm.yyyy").contains(searchQuery)
+    val filteredActivities by produceState(
+        initialValue = activities.sortedByDescending { it.begin },
+        key1 = activities,
+        key2 = debouncedSearchQuery
+    ) {
+        value = withContext(Dispatchers.Default) {
+            val filtered = if (debouncedSearchQuery.isBlank()) {
+                activities
+            } else {
+                activities.filter { activity ->
+                    activity.name.contains(debouncedSearchQuery, ignoreCase = true) ||
+                        activity.note.contains(debouncedSearchQuery, ignoreCase = true) ||
+                        formatTime(activity.begin, "dd.mm.yyyy").contains(debouncedSearchQuery)
+                }
             }
+            filtered.sortedByDescending { it.begin }
         }
-        filtered.sortedByDescending { it.begin }
     }
 
     fun scrollToTop() {
@@ -156,7 +167,12 @@ fun ActivityScreenContent(viewModel: TrackerViewModel) {
                 )
 
                 if (searchQuery.isNotEmpty()) {
-                    IconButton(onClick = { searchQuery = "" }) {
+                    IconButton(
+                        onClick = {
+                            searchQuery = ""
+                            focusManager.clearFocus()
+                        }
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Clear,
                             contentDescription = "Очистить поиск"

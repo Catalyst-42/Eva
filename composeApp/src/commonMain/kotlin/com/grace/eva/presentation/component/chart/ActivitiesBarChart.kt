@@ -43,7 +43,7 @@ fun ActivitiesBarChart(
     modifier: Modifier = Modifier,
     showStatsRow: Boolean = true
 ) {
-    if (data.isEmpty()) return
+    if (data.isEmpty() || totalDuration <= Duration.ZERO) return
 
     val textMeasurer = rememberTextMeasurer()
     val textStyle = TextStyle(

@@ -127,6 +127,7 @@ fun SaveCard(
                     editedEnd = editedEnd,
                     onNameChange = { editedName = it },
                     onEndChange = { editedEnd = it },
+                    onSaveSuccess = { isExpanded = false},
                     isCurrentSave = isCurrentSave,
                     viewModel = viewModel
                 )
@@ -194,6 +195,7 @@ private fun SaveCardForm(
     editedEnd: Instant?,
     onNameChange: (String) -> Unit,
     onEndChange: (Instant?) -> Unit,
+    onSaveSuccess: () -> Unit,
     isCurrentSave: Boolean,
     viewModel: TrackerViewModel
 ) {
@@ -261,6 +263,7 @@ private fun SaveCardForm(
         onFormatSuccess = { formatError = false },
         onValidationError = { validationError = it },
         onValidationSuccess = { validationError = null },
+        onSaveSuccess = onSaveSuccess,
         onNameSaved = onNameChange,
         onEndSaved = onEndChange,
         viewModel = viewModel
@@ -279,6 +282,7 @@ private fun SaveCardActions(
     onValidationSuccess: () -> Unit,
     onNameSaved: (String) -> Unit,
     onEndSaved: (Instant?) -> Unit,
+    onSaveSuccess: () -> Unit,
     viewModel: TrackerViewModel
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
@@ -427,6 +431,8 @@ private fun SaveCardActions(
                             if (newEnd != save.end) {
                                 onEndSaved(newEnd)
                             }
+
+                            onSaveSuccess()
                         }
                     )
                 },
