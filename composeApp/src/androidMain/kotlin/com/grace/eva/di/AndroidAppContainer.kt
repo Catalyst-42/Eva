@@ -20,7 +20,6 @@ import com.grace.eva.domain.usecase.save.UpdateSaveUseCase
 import com.grace.eva.domain.usecase.sync.ImportSaveUseCase
 
 class AndroidAppContainer(context: Context) : AppContainer {
-
     override val trackerRepository: TrackerRepository = TrackerRepositoryImpl(context)
 
     // Save UseCases

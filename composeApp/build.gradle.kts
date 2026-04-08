@@ -32,6 +32,7 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.activity.compose)
+            implementation("com.squareup.okhttp3:okhttp:4.12.0")
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)
@@ -55,6 +56,12 @@ kotlin {
             implementation("io.github.vinceglb:filekit-core:0.13.0")
             implementation("io.github.vinceglb:filekit-dialogs:0.13.0")
             implementation("io.github.vinceglb:filekit-dialogs-compose:0.13.0")
+        }
+        iosMain.dependencies {
+            implementation("io.ktor:ktor-client-core:2.3.12")
+            implementation("io.ktor:ktor-client-darwin:2.3.12")
+            implementation("io.ktor:ktor-client-content-negotiation:2.3.12")
+            implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.12")
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

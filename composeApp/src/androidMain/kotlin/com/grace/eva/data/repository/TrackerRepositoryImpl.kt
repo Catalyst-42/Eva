@@ -1,6 +1,7 @@
 package com.grace.eva.data.repository
 
 import android.content.Context
+import android.util.Log
 import androidx.core.content.FileProvider
 import com.grace.eva.domain.model.Activity
 import com.grace.eva.domain.model.ActivityTemplate
@@ -11,7 +12,6 @@ import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.openFilePicker
 import io.github.vinceglb.filekit.readString
-import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,8 +20,12 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
-import kotlin.coroutines.resume
 import kotlin.time.Clock
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -146,6 +150,8 @@ class TrackerRepositoryImpl(
     }
 
     override suspend fun updateSave(save: Save) {
+        val save = save.copy(updatedAt = Clock.System.now())
+
         _allSaves.update { saves ->
             saves.map { if (it.id == save.id) save else it }
         }
@@ -262,16 +268,73 @@ class TrackerRepositoryImpl(
             val jsonString = platformFile.readString()
             val importedSave = json.decodeFromString<Save>(jsonString)
 
-            val newSave = importedSave.copy(
-                id = Uuid.random().toString(),
-            )
-
-            writeSaveToFile(newSave)
-            _allSaves.update { it + newSave }
+            writeSaveToFile(importedSave)
+            _allSaves.update { saves ->
+                val index = saves.indexOfFirst { it.id == importedSave.id }
+                if (index != -1) {
+                    saves.toMutableList().apply { set(index, importedSave) }
+                } else {
+                    saves + importedSave
+                }
+            }
             saveTrackerConfig()
 
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+    }
+
+    private val BASE_URL = "http://10.0.2.2:8000"
+    override suspend fun syncSaveWithServer(save: Save) {
+        val serverSave = downloadSave(save.id)
+
+        if (serverSave != null && serverSave.updatedAt > save.updatedAt) {
+            updateSave(serverSave)
+        } else {
+            uploadToServer(save)
+        }
+    }
+
+    private suspend fun downloadSave(id: String): Save? = withContext(Dispatchers.IO) {
+        try {
+            val client = OkHttpClient()
+            val request = Request.Builder()
+                .url("$BASE_URL/api/saves/$id/")
+                .get()
+                .build()
+
+            val response = client.newCall(request).execute()
+
+            if (response.isSuccessful) {
+                val jsonString = response.body?.string()
+
+                val save = json.decodeFromString<Save>(jsonString ?: return@withContext null)
+                return@withContext save
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private suspend fun uploadToServer(save: Save) = withContext(Dispatchers.IO) {
+        try {
+            val client = OkHttpClient()
+            val jsonString = json.encodeToString(save)
+
+            val requestBody = MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart("file", "${save.id}.json", jsonString.toRequestBody("application/json".toMediaType()))
+                .build()
+
+            val request = Request.Builder()
+                .url("$BASE_URL/api/saves/${save.id}/")
+                .put(requestBody)
+                .build()
+
+            client.newCall(request).execute()
+        } catch (e: Exception) {
         }
     }
 }

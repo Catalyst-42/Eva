@@ -106,6 +106,14 @@ class TrackerViewModel(
         }
     }
 
+    fun onSyncSave(save: Save) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            appContainer.trackerRepository.syncSaveWithServer(save)
+            _uiState.update { it.copy(isLoading = false) }
+        }
+    }
+
     // Unified update method with callback
     fun onUpdateSave(
         save: Save, newName: String? = null, newEnd: Instant? = null, onError: (String) -> Unit,

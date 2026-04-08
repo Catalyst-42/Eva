@@ -26,4 +26,6 @@ class MockTrackerRepository : TrackerRepository {
 
     override suspend fun exportSave(save: Save) {}
     override suspend fun importSave() {}
+
+    override suspend fun syncSaveWithServer(save: Save) {}
 }

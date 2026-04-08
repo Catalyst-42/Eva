@@ -33,10 +33,12 @@ import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.ImportExport
 import androidx.compose.material.icons.filled.Mode
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Shower
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.UnfoldMoreDouble
 import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -203,6 +205,24 @@ private fun SaveCardForm(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        // OutlinedTextField(
+        //     value = save.id,
+        //     onValueChange = {},
+        //     label = { Text("ID") },
+        //     modifier = Modifier.fillMaxWidth(),
+        //     singleLine = true,
+        //     enabled = false
+        // )
+        //
+        // OutlinedTextField(
+        //     value = formatTime(save.updatedAt),
+        //     onValueChange = {},
+        //     label = { Text("Обновлено") },
+        //     modifier = Modifier.fillMaxWidth(),
+        //     singleLine = true,
+        //     enabled = false
+        // )
+
         OutlinedTextField(
             value = editedName,
             onValueChange = onNameChange,
@@ -315,16 +335,31 @@ private fun SaveCardActions(
                     )
                 }
 
+                // Sync
+                DropdownMenuItem(
+                    text = { Text("Синхронизировать") },
+                    onClick = {
+                        viewModel.onSyncSave(save)
+                        menuExpanded = false
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Sync,
+                            contentDescription = null
+                        )
+                    }
+                )
+
                 // Export
                 DropdownMenuItem(
-                    text = { Text("Экспортировать сохранение") },
+                    text = { Text("Экспортировать") },
                     onClick = {
                         viewModel.onExportSave(save)
                         menuExpanded = false
                     },
                     leadingIcon = {
                         Icon(
-                            imageVector = Icons.Default.Share,
+                            imageVector = Icons.Default.ImportExport,
                             contentDescription = null
                         )
                     }
@@ -338,7 +373,7 @@ private fun SaveCardActions(
 
                 // Delete
                 DropdownMenuItem(
-                    text = { Text("Удалить сохранение") },
+                    text = { Text("Удалить", color = MaterialTheme.colorScheme.error) },
                     onClick = {
                         viewModel.onDeleteSave(save)
                         menuExpanded = false

@@ -143,7 +143,8 @@ fun ActivityScreenContent(viewModel: TrackerViewModel) {
                     ),
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Text,
-                        imeAction = ImeAction.Search
+                        imeAction = ImeAction.Search,
+                        autoCorrectEnabled = false
                     ),
                     keyboardActions = KeyboardActions(
                         onSearch = {

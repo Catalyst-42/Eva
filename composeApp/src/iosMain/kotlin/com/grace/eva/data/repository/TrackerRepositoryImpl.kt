@@ -1,5 +1,6 @@
 package com.grace.eva.data.repository
 
+import androidx.compose.ui.autofill.ContentType
 import com.grace.eva.di.IosRootController
 import com.grace.eva.domain.model.Activity
 import com.grace.eva.domain.model.ActivityTemplate
@@ -10,6 +11,19 @@ import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.openFilePicker
 import io.github.vinceglb.filekit.readString
+import io.ktor.client.HttpClient
+import io.ktor.client.call.body
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.forms.MultiPartFormDataContent
+import io.ktor.client.request.forms.formData
+import io.ktor.client.request.get
+import io.ktor.client.request.header
+import io.ktor.client.request.put
+import io.ktor.client.request.setBody
+import io.ktor.http.Headers
+import io.ktor.http.HttpHeaders
+import io.ktor.http.contentType
+import io.ktor.serialization.kotlinx.json.json
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
@@ -25,18 +39,22 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import platform.Foundation.NSData
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSItemProvider
+import platform.Foundation.NSMutableURLRequest
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSURL
+import platform.Foundation.NSURLSession
 import platform.Foundation.NSUserDomainMask
 import platform.Foundation.create
 import platform.Foundation.dataWithContentsOfFile
 import platform.Foundation.getBytes
+import platform.Foundation.setHTTPMethod
 import platform.Foundation.writeToFile
 import platform.UIKit.UIActivityViewController
 import platform.UIKit.UIApplication
@@ -217,6 +235,8 @@ class TrackerRepositoryImpl : TrackerRepository {
     }
 
     override suspend fun updateSave(save: Save) {
+        val save = save.copy(updatedAt = Clock.System.now())
+
         _allSaves.update { saves ->
             saves.map { if (it.id == save.id) save else it }
         }
@@ -331,16 +351,71 @@ class TrackerRepositoryImpl : TrackerRepository {
             val jsonString = platformFile.readString()
             val importedSave = json.decodeFromString<Save>(jsonString)
 
-            val newSave = importedSave.copy(
-                id = Uuid.random().toString(),
-            )
-
-            writeSaveToFile(newSave)
-            _allSaves.update { it + newSave }
+            writeSaveToFile(importedSave)
+            _allSaves.update { saves ->
+                val index = saves.indexOfFirst { it.id == importedSave.id }
+                if (index != -1) {
+                    saves.toMutableList().apply { set(index, importedSave) }
+                } else {
+                    saves + importedSave
+                }
+            }
             saveTrackerConfig()
 
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+    }
+
+    private val BASE_URL = "http://192.168.1.45:8000"
+    private val client = HttpClient {
+        install(ContentNegotiation) {
+            json(Json {
+                ignoreUnknownKeys = true
+                prettyPrint = true
+            })
+        }
+    }
+
+    private suspend fun downloadSave(id: String): Save? = withContext(Dispatchers.IO) {
+        try {
+            val result = client.get("$BASE_URL/api/saves/$id/").body<Save>()
+            result
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    private suspend fun uploadSave(save: Save) = withContext(Dispatchers.IO) {
+        try {
+            val jsonString = json.encodeToString(save)
+
+            client.put("$BASE_URL/api/saves/${save.id}/") {
+                setBody(
+                    MultiPartFormDataContent(
+                    formData {
+                        append("file", jsonString, Headers.build {
+                            append(HttpHeaders.ContentType, "application/json")
+                            append(
+                                HttpHeaders.ContentDisposition,
+                                "form-data; name=\"file\"; filename=\"${save.id}.json\""
+                            )
+                        })
+                    }))
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    override suspend fun syncSaveWithServer(save: Save) {
+        val serverSave = downloadSave(save.id)
+
+        if (serverSave != null && serverSave.updatedAt > save.updatedAt) {
+            updateSave(serverSave)
+        } else {
+            uploadSave(save)
         }
     }
 }

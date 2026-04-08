@@ -25,4 +25,6 @@ interface TrackerRepository {
 
     suspend fun exportSave(save: Save)
     suspend fun importSave()
+
+    suspend fun syncSaveWithServer(save: Save)
 }

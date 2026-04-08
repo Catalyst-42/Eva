@@ -1,5 +1,6 @@
 package com.grace.eva.di
 
+import com.grace.eva.domain.model.Save
 import com.grace.eva.domain.repository.TrackerRepository
 import com.grace.eva.domain.usecase.activity.CreateActivityUseCase
 import com.grace.eva.domain.usecase.activity.RemoveActivityUseCase
