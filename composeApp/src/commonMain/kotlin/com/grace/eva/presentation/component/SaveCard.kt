@@ -2,7 +2,7 @@ package com.grace.eva.presentation.component
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -23,23 +22,15 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.Divider
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Attribution
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.ImportExport
-import androidx.compose.material.icons.filled.Mode
-import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Shower
 import androidx.compose.material.icons.filled.Sync
-import androidx.compose.material.icons.filled.UnfoldMoreDouble
 import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MenuDefaults
@@ -63,7 +54,7 @@ import com.grace.eva.util.formatDuration
 import com.grace.eva.util.formatTime
 import com.grace.eva.util.parseInstant
 import kotlinx.coroutines.delay
-import kotlin.time.Clock.System.now
+import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Instant
 
@@ -71,45 +62,57 @@ import kotlin.time.Instant
 fun SaveCard(
     save: Save,
     viewModel: TrackerViewModel,
-    expanded: Boolean = false
+    modifier: Modifier = Modifier,
+    interactionSource: MutableInteractionSource? = null,
+    expanded: Boolean = false,
+    onMessage: (String) -> Unit = {}
 ) {
     var isExpanded by remember { mutableStateOf(expanded) }
-    var editedName by remember(save.name) { mutableStateOf(save.name) }
-    var editedEnd by remember(save.end) { mutableStateOf(save.end) }
+    var editedName by remember(save.id) { mutableStateOf(save.name) }
+    var editedEnd by remember(save.id) { mutableStateOf(save.end) }
     var duration by remember { mutableStateOf(Duration.ZERO) }
+    val cardInteractionSource = interactionSource ?: remember { MutableInteractionSource() }
 
     val state by viewModel.uiState.collectAsState()
     val isCurrentSave = state.currentSave?.id == save.id
     val isSaveActive = save.end == null
     val firstActivityBegin = save.activities.firstOrNull()?.begin
 
+    // Reset edited values when save changes
+    LaunchedEffect(save.id, save.name, save.end) {
+        editedName = save.name
+        editedEnd = save.end
+    }
+
     // Timer for active save
     LaunchedEffect(save.activities.size, save.end) {
         if (isSaveActive && firstActivityBegin != null) {
             while (true) {
-                duration = now() - firstActivityBegin
+                duration = Clock.System.now() - firstActivityBegin
                 delay(1000)
             }
-        } else if (!isSaveActive && firstActivityBegin != null) {
+        } else if (!isSaveActive && firstActivityBegin != null && save.end != null) {
             duration = save.end - firstActivityBegin
         }
     }
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .animateContentSize(),
+        modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer
         ),
         shape = MaterialTheme.shapes.medium,
+        interactionSource = cardInteractionSource,
         border = if (isCurrentSave) {
             BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
         } else null,
         onClick = { isExpanded = !isExpanded }
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(16.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+                .animateContentSize()
         ) {
             SaveCardHeader(
                 name = save.name,
@@ -127,8 +130,9 @@ fun SaveCard(
                     editedEnd = editedEnd,
                     onNameChange = { editedName = it },
                     onEndChange = { editedEnd = it },
-                    onSaveSuccess = { isExpanded = false},
+                    onSaveSuccess = { isExpanded = false },
                     isCurrentSave = isCurrentSave,
+                    onMessage = onMessage,
                     viewModel = viewModel
                 )
             }
@@ -158,7 +162,7 @@ private fun SaveCardHeader(
         )
 
         val beginText = beginDate?.let {
-            "От ${formatTime(it, "dd.mm.yyyy")}"
+            "От ${formatTime(it, "dd.MM.yyyy")}"
         } ?: "Не начато"
 
         Text(
@@ -197,6 +201,7 @@ private fun SaveCardForm(
     onEndChange: (Instant?) -> Unit,
     onSaveSuccess: () -> Unit,
     isCurrentSave: Boolean,
+    onMessage: (String) -> Unit,
     viewModel: TrackerViewModel
 ) {
     var endText by remember(editedEnd) { mutableStateOf(editedEnd?.let { formatTime(it) } ?: "") }
@@ -207,24 +212,6 @@ private fun SaveCardForm(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // OutlinedTextField(
-        //     value = save.id,
-        //     onValueChange = {},
-        //     label = { Text("ID") },
-        //     modifier = Modifier.fillMaxWidth(),
-        //     singleLine = true,
-        //     enabled = false
-        // )
-        //
-        // OutlinedTextField(
-        //     value = formatTime(save.updatedAt),
-        //     onValueChange = {},
-        //     label = { Text("Обновлено") },
-        //     modifier = Modifier.fillMaxWidth(),
-        //     singleLine = true,
-        //     enabled = false
-        // )
-
         OutlinedTextField(
             value = editedName,
             onValueChange = onNameChange,
@@ -259,6 +246,7 @@ private fun SaveCardForm(
         editedName = editedName,
         endText = endText,
         isCurrentSave = isCurrentSave,
+        onMessage = onMessage,
         onFormatError = { formatError = true },
         onFormatSuccess = { formatError = false },
         onValidationError = { validationError = it },
@@ -276,6 +264,7 @@ private fun SaveCardActions(
     editedName: String,
     endText: String,
     isCurrentSave: Boolean,
+    onMessage: (String) -> Unit,
     onFormatError: () -> Unit,
     onFormatSuccess: () -> Unit,
     onValidationError: (String?) -> Unit,
@@ -339,16 +328,18 @@ private fun SaveCardActions(
                     )
                 }
 
-                // Sync
+                // Archive/Unarchive
                 DropdownMenuItem(
-                    text = { Text("Синхронизировать") },
+                    text = {
+                        Text(if (save.isArchived) "Вернуть из архива" else "Архивировать")
+                    },
                     onClick = {
-                        viewModel.onSyncSave(save)
+                        viewModel.onSetSaveArchived(save, !save.isArchived)
                         menuExpanded = false
                     },
                     leadingIcon = {
                         Icon(
-                            imageVector = Icons.Default.Sync,
+                            imageVector = if (save.isArchived) Icons.Default.Unarchive else Icons.Default.Archive,
                             contentDescription = null
                         )
                     }
@@ -373,6 +364,29 @@ private fun SaveCardActions(
                     modifier = Modifier.padding(vertical = 8.dp),
                     thickness = DividerDefaults.Thickness,
                     color = DividerDefaults.color
+                )
+
+                // Sync
+                DropdownMenuItem(
+                    text = { Text("Синхронизировать") },
+                    onClick = {
+                        viewModel.onSyncSave(
+                            save = save,
+                            onError = { message ->
+                                onMessage(message)
+                            },
+                            onSuccess = {
+                                onMessage("Сохранение синхронизировано")
+                            }
+                        )
+                        menuExpanded = false
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Sync,
+                            contentDescription = null
+                        )
+                    }
                 )
 
                 // Delete

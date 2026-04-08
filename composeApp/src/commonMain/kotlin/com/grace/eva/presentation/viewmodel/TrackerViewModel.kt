@@ -8,7 +8,9 @@ import androidx.lifecycle.viewmodel.CreationExtras
 import com.grace.eva.di.AppContainer
 import com.grace.eva.domain.model.Activity
 import com.grace.eva.domain.model.ActivityTemplate
+import com.grace.eva.domain.model.ConnectionCheckResult
 import com.grace.eva.domain.model.Save
+import com.grace.eva.domain.model.Tracker
 import com.grace.eva.ui.theme.tracker.TemplateColors
 import com.grace.eva.util.formatTime
 import com.grace.eva.util.parseColor
@@ -23,8 +25,13 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 
 data class TrackerUiState(
-    val allSaves: List<Save> = emptyList(), val currentSave: Save? = null,
-    val activityTemplates: List<ActivityTemplate> = emptyList(), val isLoading: Boolean = false
+    val tracker: Tracker = Tracker(),
+    val allSaves: List<Save> = emptyList(),
+    val currentSave: Save? = null,
+    val activityTemplates: List<ActivityTemplate> = emptyList(),
+    val isLoading: Boolean = false,
+    val isCheckingConnection: Boolean = false,
+    val lastConnectionCheck: ConnectionCheckResult? = null
 )
 
 sealed class ValidationResult {
@@ -45,12 +52,19 @@ class TrackerViewModel(
     init {
         viewModelScope.launch {
             combine(
+                appContainer.trackerRepository.getTracker(),
                 appContainer.getAllSavesUseCase(),
                 appContainer.getCurrentSaveUseCase(),
                 appContainer.getActivityTemplatesUseCase()
-            ) { allSaves: List<Save>, currentSave: Save?, templates: List<ActivityTemplate> ->
+            ) { tracker: Tracker, allSaves: List<Save>, currentSave: Save?, templates: List<ActivityTemplate> ->
                 TrackerUiState(
-                    allSaves = allSaves, currentSave = currentSave, activityTemplates = templates
+                    tracker = tracker,
+                    allSaves = allSaves,
+                    currentSave = currentSave,
+                    activityTemplates = templates,
+                    isLoading = _uiState.value.isLoading,
+                    isCheckingConnection = _uiState.value.isCheckingConnection,
+                    lastConnectionCheck = _uiState.value.lastConnectionCheck
                 )
             }.collect { state ->
                 _uiState.value = state
@@ -100,17 +114,80 @@ class TrackerViewModel(
         }
     }
 
+    fun onSetSaveArchived(save: Save, isArchived: Boolean) {
+        viewModelScope.launch {
+            appContainer.updateSaveUseCase(save.copy(isArchived = isArchived))
+        }
+    }
+
     fun onImportSave() {
         viewModelScope.launch {
             appContainer.importSaveUseCase()
         }
     }
 
-    fun onSyncSave(save: Save) {
+    fun onMoveActiveSave(fromIndex: Int, toIndex: Int) {
+        val allSaves = _uiState.value.allSaves
+        val activeSaves = allSaves.filterNot { it.isArchived }
+        val reorderedActiveSaves = activeSaves.move(fromIndex, toIndex) ?: return
+
+        viewModelScope.launch {
+            appContainer.trackerRepository.reorderSaves(
+                mergeSaveSubset(
+                    allSaves = allSaves,
+                    reorderedSubset = reorderedActiveSaves,
+                    isTarget = { !it.isArchived }
+                )
+            )
+        }
+    }
+
+    fun onMoveArchivedSave(fromIndex: Int, toIndex: Int) {
+        val allSaves = _uiState.value.allSaves
+        val archivedSaves = allSaves.filter { it.isArchived }
+        val reorderedArchivedSaves = archivedSaves.move(fromIndex, toIndex) ?: return
+
+        viewModelScope.launch {
+            appContainer.trackerRepository.reorderSaves(
+                mergeSaveSubset(
+                    allSaves = allSaves,
+                    reorderedSubset = reorderedArchivedSaves,
+                    isTarget = { it.isArchived }
+                )
+            )
+        }
+    }
+
+    fun onSyncSave(
+        save: Save,
+        onError: (String) -> Unit,
+        onSuccess: () -> Unit
+    ) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            appContainer.trackerRepository.syncSaveWithServer(save)
-            _uiState.update { it.copy(isLoading = false) }
+            try {
+                appContainer.trackerRepository.syncSaveWithServer(save)
+                onSuccess()
+            } catch (e: Exception) {
+                onError(e.message ?: "Не удалось синхронизировать сохранение")
+            } finally {
+                _uiState.update { it.copy(isLoading = false) }
+            }
+        }
+    }
+
+    fun onUpdateRemoteServerUrl(url: String) {
+        viewModelScope.launch {
+            appContainer.trackerRepository.updateRemoteServerUrl(url)
+        }
+    }
+
+    fun onTestRemoteServerConnection(url: String? = null) {
+        runConnectionCheck {
+            if (url != null) {
+                appContainer.trackerRepository.updateRemoteServerUrl(url)
+            }
+            appContainer.trackerRepository.testRemoteServerConnection()
         }
     }
 
@@ -221,6 +298,14 @@ class TrackerViewModel(
         }
     }
 
+    fun onMoveActivityTemplate(fromIndex: Int, toIndex: Int) {
+        val reorderedTemplates = _uiState.value.activityTemplates.move(fromIndex, toIndex) ?: return
+
+        viewModelScope.launch {
+            appContainer.trackerRepository.reorderActivityTemplates(reorderedTemplates)
+        }
+    }
+
     fun getTemplateForActivity(activityName: String): ActivityTemplate? {
         val templates = _uiState.value.activityTemplates
         val template = templates.find { it.name == activityName }
@@ -291,6 +376,27 @@ class TrackerViewModel(
         }
     }
 
+    private fun runConnectionCheck(
+        block: suspend () -> ConnectionCheckResult
+    ) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isCheckingConnection = true, lastConnectionCheck = null) }
+            val result = block()
+            _uiState.update { it.copy(isCheckingConnection = false, lastConnectionCheck = result) }
+        }
+    }
+
+    private fun mergeSaveSubset(
+        allSaves: List<Save>,
+        reorderedSubset: List<Save>,
+        isTarget: (Save) -> Boolean
+    ): List<Save> {
+        val reorderedIterator = reorderedSubset.iterator()
+        return allSaves.map { save ->
+            if (isTarget(save)) reorderedIterator.next() else save
+        }
+    }
+
     @Suppress("UNCHECKED_CAST")
     class Factory(
         private val appContainer: AppContainer
@@ -306,4 +412,17 @@ class TrackerViewModel(
             return TrackerViewModel(appContainer) as T
         }
     }
+}
+
+private fun <T> List<T>.move(fromIndex: Int, toIndex: Int): List<T>? {
+    if (isEmpty()) return null
+
+    val normalizedFrom = fromIndex.coerceIn(indices)
+    if (normalizedFrom == toIndex) return null
+
+    val mutableList = toMutableList()
+    val item = mutableList.removeAt(normalizedFrom)
+    val adjustedTo = toIndex.coerceIn(0, mutableList.size)
+    mutableList.add(adjustedTo, item)
+    return mutableList
 }

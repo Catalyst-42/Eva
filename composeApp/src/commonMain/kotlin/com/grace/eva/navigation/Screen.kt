@@ -28,10 +28,12 @@ enum class Screen(
     val route: String,
     val icon: ImageVector,
     val label: String,
-    val order: Int
+    val order: Int,
+    val showInNavigation: Boolean = true
 ) {
     Tracker("tracker", Icons.Rounded.Gamepad, "Трекер", 0),
     Activities("activities", Icons.Default.ViewAgenda, "Активности", 1),
     Stats("stats", Icons.Rounded.Dashboard, "Статистика", 2),
-    Settings("settings", Icons.Default.Save, "Сохранения", 3)
+    Settings("settings", Icons.Default.Save, "Сохранения", 3),
+    RemoteConnections("remote-connections", Icons.Default.Settings, "Подключения", 4, false)
 }

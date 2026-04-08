@@ -340,18 +340,10 @@ fun ActivitySelectionSection(
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         row.forEach { stat ->
-                            val index = activityStats.indexOf(stat)
                             val isSelected = selectedActivityName == stat.name
-                            val percentage = if (totalDuration.inWholeSeconds > 0) {
-                                (stat.totalDuration.inWholeSeconds.toFloat() / totalDuration.inWholeSeconds.toFloat()) * 100
-                            } else {
-                                0f
-                            }
 
                             ActivitySelectionButton(
                                 name = stat.name,
-                                color = getColorForActivity(stat.name, index),
-                                percentage = percentage,
                                 isSelected = isSelected,
                                 onClick = { onActivitySelected(stat.name) },
                                 modifier = Modifier.weight(1f),
@@ -373,8 +365,6 @@ fun ActivitySelectionSection(
 @Composable
 fun ActivitySelectionButton(
     name: String,
-    color: Color,
-    percentage: Float,
     isSelected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,

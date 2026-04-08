@@ -4,6 +4,7 @@ import androidx.compose.ui.autofill.ContentType
 import com.grace.eva.di.IosRootController
 import com.grace.eva.domain.model.Activity
 import com.grace.eva.domain.model.ActivityTemplate
+import com.grace.eva.domain.model.ConnectionCheckResult
 import com.grace.eva.domain.model.Save
 import com.grace.eva.domain.model.Tracker
 import com.grace.eva.domain.repository.TrackerRepository
@@ -73,6 +74,7 @@ private const val TRACKER_CONFIG_FILE = "tracker.json"
 private const val SAVES_DIRECTORY = "saves"
 
 class TrackerRepositoryImpl : TrackerRepository {
+    private val _tracker = MutableStateFlow(Tracker())
     private val _allSaves = MutableStateFlow<List<Save>>(emptyList())
     private val _currentSave = MutableStateFlow<Save?>(null)
     private val json = Json {
@@ -161,6 +163,7 @@ class TrackerRepositoryImpl : TrackerRepository {
         } else {
             Tracker()
         }
+        _tracker.value = meta
 
         val saves = meta.saves.mapNotNull { saveId ->
             val saveFilePath = getSaveFilePath(saveId) ?: return@mapNotNull null
@@ -180,9 +183,11 @@ class TrackerRepositoryImpl : TrackerRepository {
 
     private fun saveTrackerConfig() {
         val configFilePath = getTrackerMetaFilePath() ?: return
-        val config = Tracker(
-            saves = _allSaves.value.map { it.id }, currentSaveId = _currentSave.value?.id
+        val config = _tracker.value.copy(
+            saves = _allSaves.value.map { it.id },
+            currentSaveId = _currentSave.value?.id
         )
+        _tracker.value = config
         val jsonString = json.encodeToString(config)
         writeToFile(jsonString, configFilePath)
     }
@@ -202,6 +207,8 @@ class TrackerRepositoryImpl : TrackerRepository {
             fileManager.removeItemAtPath(filePath, null)
         }
     }
+
+    override suspend fun getTracker(): Flow<Tracker> = _tracker.asStateFlow()
 
     override suspend fun getAllSaves(): Flow<List<Save>> = _allSaves.asStateFlow()
 
@@ -246,6 +253,14 @@ class TrackerRepositoryImpl : TrackerRepository {
         }
 
         writeSaveToFile(save)
+        saveTrackerConfig()
+    }
+
+    override suspend fun reorderSaves(saves: List<Save>) {
+        _allSaves.value = saves
+        _currentSave.value?.id?.let { currentSaveId ->
+            _currentSave.value = saves.find { it.id == currentSaveId }
+        }
         saveTrackerConfig()
     }
 
@@ -305,6 +320,15 @@ class TrackerRepositoryImpl : TrackerRepository {
         )
 
         updateSave(updatedSave)
+    }
+
+    override suspend fun reorderActivityTemplates(templates: List<ActivityTemplate>) {
+        val current = _currentSave.value ?: return
+        updateSave(
+            current.copy(
+                activityTemplates = templates.toMutableList()
+            )
+        )
     }
 
     override suspend fun getActivityTemplates(): Flow<List<ActivityTemplate>> {
@@ -367,7 +391,6 @@ class TrackerRepositoryImpl : TrackerRepository {
         }
     }
 
-    private val BASE_URL = "http://192.168.1.45:8000"
     private val client = HttpClient {
         install(ContentNegotiation) {
             json(Json {
@@ -377,21 +400,52 @@ class TrackerRepositoryImpl : TrackerRepository {
         }
     }
 
+    override suspend fun updateRemoteServerUrl(url: String) {
+        _tracker.update { it.copy(remoteServerUrl = normalizeBaseUrl(url)) }
+        saveTrackerConfig()
+    }
+
+    override suspend fun testRemoteServerConnection(): ConnectionCheckResult {
+        return testConnection(
+            title = "Сервер",
+            path = ""
+        )
+    }
+
+    override suspend fun testRemoteSaveApiConnection(): ConnectionCheckResult {
+        return testConnection(
+            title = "API сохранений",
+            path = "/api/saves/"
+        )
+    }
+
     private suspend fun downloadSave(id: String): Save? = withContext(Dispatchers.IO) {
+        val baseUrl = getBaseUrl()
+            ?: throw IllegalStateException("Укажите адрес удалённого сервера")
+
         try {
-            val result = client.get("$BASE_URL/api/saves/$id/").body<Save>()
-            result
+            val response = client.get("$baseUrl/api/saves/$id/")
+            when (response.status.value) {
+                in 200..299 -> response.body<Save>()
+                404 -> null
+                else -> throw IllegalStateException("Ошибка синхронизации: HTTP ${response.status.value}")
+            }
         } catch (e: Exception) {
-            e.printStackTrace()
-            null
+            throw IllegalStateException(
+                e.message ?: "Не удалось получить сохранение с сервера",
+                e
+            )
         }
     }
 
     private suspend fun uploadSave(save: Save) = withContext(Dispatchers.IO) {
+        val baseUrl = getBaseUrl()
+            ?: throw IllegalStateException("Укажите адрес удалённого сервера")
+
         try {
             val jsonString = json.encodeToString(save)
 
-            client.put("$BASE_URL/api/saves/${save.id}/") {
+            val response = client.put("$baseUrl/api/saves/${save.id}/") {
                 setBody(
                     MultiPartFormDataContent(
                     formData {
@@ -404,8 +458,14 @@ class TrackerRepositoryImpl : TrackerRepository {
                         })
                     }))
             }
+            if (response.status.value !in 200..299) {
+                throw IllegalStateException("Ошибка синхронизации: HTTP ${response.status.value}")
+            }
         } catch (e: Exception) {
-            e.printStackTrace()
+            throw IllegalStateException(
+                e.message ?: "Не удалось отправить сохранение на сервер",
+                e
+            )
         }
     }
 
@@ -417,5 +477,45 @@ class TrackerRepositoryImpl : TrackerRepository {
         } else {
             uploadSave(save)
         }
+    }
+
+    private suspend fun testConnection(
+        title: String,
+        path: String
+    ): ConnectionCheckResult = withContext(Dispatchers.IO) {
+        val baseUrl = getBaseUrl()
+            ?: return@withContext ConnectionCheckResult(
+                title = title,
+                isSuccess = false,
+                message = "Укажите адрес сервера"
+            )
+
+        try {
+            val response = client.get("$baseUrl$path")
+            val statusCode = response.status.value
+            ConnectionCheckResult(
+                title = title,
+                isSuccess = statusCode in 200..299,
+                message = if (statusCode in 200..299) {
+                    "Соединение успешно: HTTP $statusCode"
+                } else {
+                    "Сервер ответил с ошибкой: HTTP $statusCode"
+                }
+            )
+        } catch (e: Exception) {
+            ConnectionCheckResult(
+                title = title,
+                isSuccess = false,
+                message = e.message ?: "Не удалось подключиться"
+            )
+        }
+    }
+
+    private fun getBaseUrl(): String? {
+        return normalizeBaseUrl(_tracker.value.remoteServerUrl).ifBlank { "" }.takeIf { it.isNotBlank() }
+    }
+
+    private fun normalizeBaseUrl(url: String): String {
+        return url.trim().trimEnd('/')
     }
 }

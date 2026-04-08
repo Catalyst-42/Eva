@@ -26,10 +26,12 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,33 +50,39 @@ import com.grace.eva.util.parseColor
 fun TemplateCard(
     template: ActivityTemplate,
     viewModel: TrackerViewModel,
+    modifier: Modifier = Modifier,
+    interactionSource: MutableInteractionSource? = null,
     expanded: Boolean = false
 ) {
     var isExpanded by remember { mutableStateOf(expanded) }
-    var editedName by remember(template.id, template.name) {
-        mutableStateOf(template.name)
-    }
-    var editedColor by remember(template.id, template.color) {
-        mutableStateOf(template.color)
-    }
-    var isHidden by remember(template.id, template.color) {
-        mutableStateOf(template.isHidden)
-    }
+    var editedName by remember(template.id) { mutableStateOf(template.name) }
+    var editedColor by remember(template.id) { mutableStateOf(template.color) }
+    var isHidden by remember(template.id) { mutableStateOf(template.isHidden) }
     var formatError by remember { mutableStateOf(false) }
     var validationError by remember { mutableStateOf<String?>(null) }
+    val cardInteractionSource = interactionSource ?: remember { MutableInteractionSource() }
+
+    // Reset edited values when template changes
+    LaunchedEffect(template.id, template.name, template.color, template.isHidden) {
+        editedName = template.name
+        editedColor = template.color
+        isHidden = template.isHidden
+    }
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .animateContentSize(),
+        modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         ),
         shape = MaterialTheme.shapes.medium,
+        interactionSource = cardInteractionSource,
         onClick = { isExpanded = !isExpanded }
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(16.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+                .animateContentSize()
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -135,10 +143,10 @@ fun TemplateCard(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
                         .clickable(
-                        onClick = {
-                            isHidden = !isHidden
-                        }
-                    )
+                            onClick = {
+                                isHidden = !isHidden
+                            }
+                        )
                 ) {
                     Checkbox(
                         checked = isHidden,

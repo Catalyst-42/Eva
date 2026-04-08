@@ -43,6 +43,7 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
+            implementation(libs.reorderable)
             implementation("org.jetbrains.androidx.navigation:navigation-compose:2.9.2")
             implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.10.0")
             api(libs.androidx.lifecycle.viewmodel)
@@ -99,4 +100,3 @@ android {
 dependencies {
     debugImplementation(libs.compose.uiTooling)
 }
-

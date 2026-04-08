@@ -24,7 +24,7 @@ fun AppNavigationSuite(
 
     NavigationSuiteScaffold(
         navigationSuiteItems = {
-            Screen.entries.forEach { screen ->
+            Screen.entries.filter { it.showInNavigation }.forEach { screen ->
                 item(
                     icon = { Icon(screen.icon, contentDescription = screen.label) },
                     label = { Text(screen.label) },

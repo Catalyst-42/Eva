@@ -32,6 +32,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+private val ActivitiesListBottomPadding = 320.dp
+
 @Composable
 fun ActivitiesScreen(
     appContainer: AppContainer
@@ -52,35 +54,41 @@ fun ActivityScreenContent(viewModel: TrackerViewModel) {
     val activities = state.currentSave?.activities ?: emptyList()
 
     var searchQuery by rememberSaveable(currentSaveId) { mutableStateOf("") }
+    var debouncedSearchQuery by rememberSaveable(currentSaveId) { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val scrollState = rememberLazyListState()
 
     val focusManager = LocalFocusManager.current
 
-    var debouncedSearchQuery by remember(currentSaveId) { mutableStateOf(searchQuery) }
+    // Сбрасываем поиск при смене сохранения
+    LaunchedEffect(currentSaveId) {
+        searchQuery = ""
+        debouncedSearchQuery = ""
+    }
 
+    // Debounce для поиска
     LaunchedEffect(searchQuery) {
         delay(300)
         debouncedSearchQuery = searchQuery
     }
 
-    val filteredActivities by produceState(
-        initialValue = activities.sortedByDescending { it.begin },
-        key1 = activities,
-        key2 = debouncedSearchQuery
-    ) {
-        value = withContext(Dispatchers.Default) {
+    // Фильтрация в фоне с кэшированием результата
+    var filteredActivities by remember { mutableStateOf(emptyList<com.grace.eva.domain.model.Activity>()) }
+
+    LaunchedEffect(activities, debouncedSearchQuery) {
+        val result = withContext(Dispatchers.Default) {
             val filtered = if (debouncedSearchQuery.isBlank()) {
                 activities
             } else {
                 activities.filter { activity ->
                     activity.name.contains(debouncedSearchQuery, ignoreCase = true) ||
-                        activity.note.contains(debouncedSearchQuery, ignoreCase = true) ||
-                        formatTime(activity.begin, "dd.mm.yyyy").contains(debouncedSearchQuery)
+                            activity.note.contains(debouncedSearchQuery, ignoreCase = true) ||
+                            formatTime(activity.begin, "dd.mm.yyyy").contains(debouncedSearchQuery)
                 }
             }
             filtered.sortedByDescending { it.begin }
         }
+        filteredActivities = result
     }
 
     fun scrollToTop() {
@@ -144,7 +152,7 @@ fun ActivityScreenContent(viewModel: TrackerViewModel) {
                             "Поиск",
                             style = MaterialTheme.typography.titleMedium
                         )
-                      },
+                    },
                     singleLine = true,
                     colors = TextFieldDefaults.colors(
                         unfocusedContainerColor = Color.Transparent,
@@ -217,7 +225,12 @@ fun ActivityScreenContent(viewModel: TrackerViewModel) {
                 .fillMaxSize()
                 .weight(1f),
             verticalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp)
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                top = 16.dp,
+                end = 16.dp,
+                bottom = ActivitiesListBottomPadding
+            )
         ) {
             if (state.currentSave == null) {
                 item {

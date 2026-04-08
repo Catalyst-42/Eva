@@ -19,7 +19,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -36,38 +37,37 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.grace.eva.di.MockAppContainer
 import com.grace.eva.di.MockType
-import com.grace.eva.domain.model.ActivityTemplate
-import com.grace.eva.presentation.component.TemplateCard
+import com.grace.eva.domain.model.Save
+import com.grace.eva.presentation.component.SaveCard
 import com.grace.eva.presentation.viewmodel.TrackerViewModel
-import com.grace.eva.ui.theme.tracker.TemplateColors
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
-private val TemplateListBottomPadding = 320.dp
+private val ArchivedSavesListBottomPadding = 320.dp
 
 @Composable
-fun TemplateManagementScreen(
-    activityTemplates: List<ActivityTemplate>, viewModel: TrackerViewModel, onClose: () -> Unit
+fun ArchivedSavesScreen(
+    saves: List<Save>, viewModel: TrackerViewModel, onClose: () -> Unit,
+    onMessage: (String) -> Unit = {}
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
     val hapticFeedback = LocalHapticFeedback.current
     val lazyListState = rememberLazyListState()
     val reorderableLazyListState = rememberReorderableLazyListState(lazyListState) { from, to ->
-        viewModel.onMoveActivityTemplate(from.index, to.index)
+        viewModel.onMoveArchivedSave(from.index, to.index)
         hapticFeedback.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
     }
 
     Column(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp).padding(top = 16.dp)
     ) {
-        // Header
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Шаблоны активностей",
+                text = "Архив сохранений",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
             )
@@ -88,56 +88,51 @@ fun TemplateManagementScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            state = lazyListState,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(bottom = TemplateListBottomPadding)
-        ) {
-            // List of templates
-            items(
-                items = activityTemplates, key = { template -> template.id }) { template ->
-                ReorderableItem(
-                    reorderableLazyListState,
-                    key = template.id,
-                    animateItemModifier = Modifier.animateItem(
-                        placementSpec = spring(
-                            stiffness = Spring.StiffnessHigh,
-                            visibilityThreshold = IntOffset.VisibilityThreshold
-                        )
-                    )
-                ) {
-                    val interactionSource = remember { MutableInteractionSource() }
-
-                    TemplateCard(
-                        template = template,
-                        viewModel = viewModel,
-                        modifier = Modifier.longPressDraggableHandle(
-                            interactionSource = interactionSource,
-                            onDragStarted = {
-                                hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
-                            },
-                            onDragStopped = {
-                                hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureEnd)
-                            }),
-                        interactionSource = interactionSource)
-                }
+        if (saves.isEmpty()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                )
+            ) {
+                Text(
+                    text = "В архиве пока нет сохранений.", modifier = Modifier.padding(16.dp)
+                )
             }
-
-            // Button to add new
-            item {
-                Button(
-                    onClick = {
-                        val newIndex = activityTemplates.size
-                        val newTemplateName = "Активность ${newIndex + 1}"
-                        val newColor = TemplateColors.getColorForIndex(newIndex)
-
-                        viewModel.onAddActivityTemplate(
-                            name = newTemplateName, color = newColor
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                state = lazyListState,
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                contentPadding = PaddingValues(bottom = ArchivedSavesListBottomPadding)
+            ) {
+                items(
+                    items = saves, key = { save -> save.id }) { save ->
+                    ReorderableItem(
+                        reorderableLazyListState,
+                        key = save.id,
+                        animateItemModifier = Modifier.animateItem(
+                            placementSpec = spring(
+                                stiffness = Spring.StiffnessHigh,
+                                visibilityThreshold = IntOffset.VisibilityThreshold
+                            )
                         )
-                    }, modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Добавить шаблон")
+                    ) {
+                        val interactionSource = remember { MutableInteractionSource() }
+
+                        SaveCard(
+                            save = save,
+                            viewModel = viewModel,
+                            modifier = Modifier.longPressDraggableHandle(
+                                interactionSource = interactionSource,
+                                onDragStarted = {
+                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
+                                },
+                                onDragStopped = {
+                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureEnd)
+                                }),
+                            interactionSource = interactionSource,
+                            onMessage = onMessage)
+                    }
                 }
             }
         }
@@ -146,26 +141,14 @@ fun TemplateManagementScreen(
 
 @Preview(showBackground = true)
 @Composable
-fun TemplateManagementScreenPreview() {
+private fun ArchivedSavesScreenPreview() {
     val mockViewModel = TrackerViewModel(
-        appContainer = MockAppContainer(MockType.SIMPLE)
+        appContainer = MockAppContainer(MockType.LARGE)
     )
 
-    TemplateManagementScreen(
-        activityTemplates = mockViewModel.uiState.value.activityTemplates,
-        viewModel = mockViewModel,
-        onClose = {})
-}
-
-@Preview(showBackground = true)
-@Composable
-fun TemplateManagementScreenEmptyPreview() {
-    val mockViewModel = TrackerViewModel(
-        appContainer = MockAppContainer(MockType.EMPTY)
-    )
-
-    TemplateManagementScreen(
-        activityTemplates = mockViewModel.uiState.value.activityTemplates,
-        viewModel = mockViewModel,
-        onClose = {})
+    ArchivedSavesScreen(
+        saves = listOf(
+            mockViewModel.uiState.value.currentSave?.copy(isArchived = true)
+                ?: Save(isArchived = true)
+        ), viewModel = mockViewModel, onClose = {})
 }

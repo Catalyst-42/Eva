@@ -11,6 +11,7 @@ data class Save @OptIn(ExperimentalUuidApi::class) constructor(
     val name: String = "Новое сохранение",
     val activities: MutableList<Activity> = mutableListOf(),
     val activityTemplates: MutableList<ActivityTemplate> = mutableListOf(),
+    val isArchived: Boolean = false,
     val end: Instant? = null,
     val updatedAt: Instant = Clock.System.now(),
     val id: String = Uuid.random().toString(),
