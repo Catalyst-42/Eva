@@ -162,7 +162,7 @@ private fun SaveCardHeader(
         )
 
         val beginText = beginDate?.let {
-            "От ${formatTime(it, "dd.MM.yyyy")}"
+            "От ${formatTime(it, "dd.mm.yyyy")}"
         } ?: "Не начато"
 
         Text(
@@ -360,12 +360,6 @@ private fun SaveCardActions(
                     }
                 )
 
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 8.dp),
-                    thickness = DividerDefaults.Thickness,
-                    color = DividerDefaults.color
-                )
-
                 // Sync
                 DropdownMenuItem(
                     text = { Text("Синхронизировать") },
@@ -387,6 +381,12 @@ private fun SaveCardActions(
                             contentDescription = null
                         )
                     }
+                )
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 8.dp),
+                    thickness = DividerDefaults.Thickness,
+                    color = DividerDefaults.color
                 )
 
                 // Delete

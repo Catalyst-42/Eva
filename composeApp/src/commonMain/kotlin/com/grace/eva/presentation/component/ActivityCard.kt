@@ -293,7 +293,11 @@ private fun ActivityCardControls(
                 color = MaterialTheme.colorScheme.error
             )
         ) {
-            Text("Удалить")
+            Text(
+                text="Удалить",
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
 
         Button(
