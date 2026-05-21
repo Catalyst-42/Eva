@@ -1,6 +1,9 @@
 # Eva
 Open any activity time tracker for iOS and Android with statistics and save management.
 
+> [!NOTE]  
+> App server is located in [separate repository](https://github.com/Catalyst-42/Adam)
+
 ## Features
 - Stage-based time tracking - create custom stages and track time
 - Multiple save slots - switch between projects or contexts

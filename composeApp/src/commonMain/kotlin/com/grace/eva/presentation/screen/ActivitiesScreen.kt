@@ -128,7 +128,7 @@ fun ActivityScreenContent(viewModel: TrackerViewModel) {
             modifier = Modifier.padding(horizontal = 16.dp)
         )
 
-        // Floating search card styled like inactive card
+        // Search
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -190,7 +190,7 @@ fun ActivityScreenContent(viewModel: TrackerViewModel) {
             }
         }
 
-        // Title and results count
+        // History
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -300,7 +300,7 @@ fun EmptyActivitiesCard() {
 @Composable
 fun ActivitiesScreenPreview() {
     val mockViewModel = remember {
-        TrackerViewModel(appContainer = MockAppContainer(MockType.SIMPLE))
+        TrackerViewModel(appContainer = MockAppContainer(MockType.LARGE))
     }
 
     ActivityScreenContent(mockViewModel)

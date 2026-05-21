@@ -412,13 +412,6 @@ class TrackerRepositoryImpl : TrackerRepository {
         )
     }
 
-    override suspend fun testRemoteSaveApiConnection(): ConnectionCheckResult {
-        return testConnection(
-            title = "API сохранений",
-            path = "/api/saves/"
-        )
-    }
-
     private suspend fun downloadSave(id: String): Save? = withContext(Dispatchers.IO) {
         val baseUrl = getBaseUrl()
             ?: throw IllegalStateException("Укажите адрес удалённого сервера")

@@ -91,7 +91,7 @@ fun SaveCard(
                 duration = Clock.System.now() - firstActivityBegin
                 delay(1000)
             }
-        } else if (!isSaveActive && firstActivityBegin != null && save.end != null) {
+        } else if (!isSaveActive && firstActivityBegin != null) {
             duration = save.end - firstActivityBegin
         }
     }

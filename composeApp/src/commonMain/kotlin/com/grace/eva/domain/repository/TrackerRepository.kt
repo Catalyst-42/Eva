@@ -33,6 +33,5 @@ interface TrackerRepository {
 
     suspend fun updateRemoteServerUrl(url: String)
     suspend fun testRemoteServerConnection(): ConnectionCheckResult
-    suspend fun testRemoteSaveApiConnection(): ConnectionCheckResult
     suspend fun syncSaveWithServer(save: Save)
 }

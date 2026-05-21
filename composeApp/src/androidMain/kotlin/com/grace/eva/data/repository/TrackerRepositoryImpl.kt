@@ -320,13 +320,6 @@ class TrackerRepositoryImpl(
         )
     }
 
-    override suspend fun testRemoteSaveApiConnection(): ConnectionCheckResult {
-        return testConnection(
-            title = "API сохранений",
-            path = "/api/saves/"
-        )
-    }
-
     override suspend fun syncSaveWithServer(save: Save) {
         val serverSave = downloadSave(save.id)
 

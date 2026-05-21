@@ -177,7 +177,11 @@ fun TemplateCard(
                         ),
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Удалить")
+                        Text(
+                            text = "Удалить",
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
 
                     Button(

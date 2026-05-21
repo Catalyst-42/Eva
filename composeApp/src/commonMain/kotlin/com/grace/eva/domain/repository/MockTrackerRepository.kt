@@ -33,10 +33,6 @@ class MockTrackerRepository : TrackerRepository {
     override suspend fun importSave() {}
     override suspend fun updateRemoteServerUrl(url: String) {}
     override suspend fun testRemoteServerConnection(): ConnectionCheckResult =
-        ConnectionCheckResult("Сервер", true, "Мок-соединение доступно")
-
-    override suspend fun testRemoteSaveApiConnection(): ConnectionCheckResult =
-        ConnectionCheckResult("API сохранений", true, "Мок-API доступно")
-
+        ConnectionCheckResult("Server", true, "Fine")
     override suspend fun syncSaveWithServer(save: Save) {}
 }

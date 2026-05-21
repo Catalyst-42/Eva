@@ -57,7 +57,7 @@ data class TimeSegment(
     val activity: Activity,
     val duration: Long,
     val isActive: Boolean = false,
-    val isHidden: Boolean = false  // Added field for hidden segments
+    val isHidden: Boolean = false
 )
 
 data class DayTimeline(
@@ -71,7 +71,7 @@ fun ActivitiesMapChart(
     isSaveCompleted: Boolean,
     saveEnd: Instant? = null,
     getColorForActivity: (String) -> Color,
-    getActivityTemplateIsHidden: (String) -> Boolean,  // New parameter to get isHidden from template
+    getActivityTemplateIsHidden: (String) -> Boolean,
     modifier: Modifier = Modifier
 ) {
     if (activities.isEmpty()) return
