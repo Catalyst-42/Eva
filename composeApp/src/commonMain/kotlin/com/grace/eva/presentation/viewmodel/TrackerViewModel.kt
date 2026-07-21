@@ -22,6 +22,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.reflect.KClass
 import kotlin.time.Clock
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Instant
 
 data class TrackerUiState(
@@ -68,7 +70,11 @@ class TrackerViewModel(
                 )
             }.collect { state ->
                 _uiState.value = state
-                _currentActivity.value = state.currentSave?.activities?.lastOrNull()
+                
+                // Find the most recent activity (latest begin time)
+                val currentSave = state.currentSave
+                val currentActivity = currentSave?.activities?.maxByOrNull { it.begin }
+                _currentActivity.value = currentActivity
             }
         }
     }
@@ -256,6 +262,12 @@ class TrackerViewModel(
     fun onRemoveActivity(activity: Activity) {
         viewModelScope.launch {
             appContainer.removeActivityUseCase(activity)
+        }
+    }
+
+    fun onInsertEmptyStageBefore(activity: Activity) {
+        viewModelScope.launch {
+            appContainer.insertEmptyActivityBeforeUseCase(activity)
         }
     }
 

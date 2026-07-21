@@ -43,6 +43,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.datetime.Instant
 import platform.Foundation.NSData
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
@@ -67,6 +68,8 @@ import platform.UIKit.UIImpactFeedbackStyle
 import platform.UIKit.UIViewController
 import platform.darwin.NSObject
 import kotlin.time.Clock
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.hours
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -272,6 +275,35 @@ class TrackerRepositoryImpl : TrackerRepository {
         )
 
         updateSave(updatedSave)
+    }
+
+    override suspend fun insertEmptyActivityBefore(activity: Activity) {
+        val current = _currentSave.value ?: return
+        val activities = current.activities
+        val index = activities.indexOfFirst { it.id == activity.id }
+        
+        if (index <= 0) {
+            // Если это первый этап, создаем новый на час раньше
+            val newBegin = activity.begin.minus(1.hours)
+            val newActivity = Activity(name = "Активность", begin = newBegin)
+            val updatedSave = current.copy(
+                activities = (listOf(newActivity) + activities).toMutableList()
+            )
+            updateSave(updatedSave)
+        } else {
+            // Иначе создаем между предыдущим и текущим
+            val previousActivity = activities[index - 1]
+            val newBegin = Instant.fromEpochMilliseconds(
+                (previousActivity.begin.toEpochMilliseconds() + activity.begin.toEpochMilliseconds()) / 2
+            )
+            val newActivity = Activity(name = "Активность", begin = newBegin)
+            
+            val updatedActivities = activities.toMutableList()
+            updatedActivities.add(index, newActivity)
+            
+            val updatedSave = current.copy(activities = updatedActivities)
+            updateSave(updatedSave)
+        }
     }
 
     override suspend fun removeActivity(activity: Activity) {

@@ -3,6 +3,7 @@ package com.grace.eva.di
 import com.grace.eva.data.repository.TrackerRepositoryImpl
 import com.grace.eva.domain.repository.TrackerRepository
 import com.grace.eva.domain.usecase.activity.CreateActivityUseCase
+import com.grace.eva.domain.usecase.activity.InsertEmptyActivityBeforeUseCase
 import com.grace.eva.domain.usecase.activity.RemoveActivityUseCase
 import com.grace.eva.domain.usecase.activity.UpdateActivityUseCase
 import com.grace.eva.domain.usecase.activity.template.AddActivityTemplateUseCase
@@ -31,6 +32,7 @@ class IosAppContainer : AppContainer {
 
     // Activity UseCases
     override val createActivityUseCase: CreateActivityUseCase = CreateActivityUseCase(trackerRepository)
+    override val insertEmptyActivityBeforeUseCase: InsertEmptyActivityBeforeUseCase = InsertEmptyActivityBeforeUseCase(trackerRepository)
     override val removeActivityUseCase: RemoveActivityUseCase = RemoveActivityUseCase(trackerRepository)
     override val updateActivityUseCase: UpdateActivityUseCase = UpdateActivityUseCase(trackerRepository)
 

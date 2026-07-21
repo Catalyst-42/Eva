@@ -19,6 +19,7 @@ interface TrackerRepository {
     suspend fun reorderSaves(saves: List<Save>)
 
     suspend fun addActivity(name: String)
+    suspend fun insertEmptyActivityBefore(activity: Activity)
     suspend fun removeActivity(activity: Activity)
     suspend fun updateActivity(activity: Activity)
 

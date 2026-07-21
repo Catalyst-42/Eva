@@ -20,6 +20,7 @@ class MockTrackerRepository : TrackerRepository {
     override suspend fun reorderSaves(saves: List<Save>) {}
 
     override suspend fun addActivity(name: String) {}
+    override suspend fun insertEmptyActivityBefore(activity: Activity) {}
     override suspend fun removeActivity(activity: Activity) {}
     override suspend fun updateActivity(activity: Activity) {}
 

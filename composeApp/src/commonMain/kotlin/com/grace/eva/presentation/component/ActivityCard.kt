@@ -4,6 +4,7 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,10 +16,20 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.DividerDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ViewAgenda
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -153,10 +164,6 @@ fun ActivityCard(
                     viewModel = viewModel,
                     onSaveSuccess = {
                         isExpanded = false
-                    },
-                    onDelete = {
-                        viewModel.onRemoveActivity(activity)
-                        isExpanded = false
                     }
                 )
             }
@@ -222,6 +229,71 @@ private fun EmptyActivityCard() {
 }
 
 @Composable
+private fun ActivityCardHeaderDropdownMenu(
+    onInsertEmptyStageBefore: () -> Unit,
+    onDelete: () -> Unit
+) {
+    var menuExpanded by remember { mutableStateOf(false) }
+
+    Box {
+        IconButton(
+            onClick = { menuExpanded = true }
+        ) {
+            Icon(
+                imageVector = Icons.Default.Settings,
+                contentDescription = "Действия"
+            )
+        }
+
+        DropdownMenu(
+            expanded = menuExpanded,
+            onDismissRequest = { menuExpanded = false },
+            modifier = Modifier
+        ) {
+            // Insert empty stage before
+            DropdownMenuItem(
+                text = { Text("Добавить активность ранее") },
+                onClick = {
+                    onInsertEmptyStageBefore()
+                    menuExpanded = false
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.ViewAgenda,
+                        contentDescription = null
+                    )
+                }
+            )
+
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 8.dp),
+                thickness = DividerDefaults.Thickness,
+                color = DividerDefaults.color
+            )
+
+            // Delete
+            DropdownMenuItem(
+                text = { Text("Удалить", color = MaterialTheme.colorScheme.error) },
+                onClick = {
+                    onDelete()
+                    menuExpanded = false
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                },
+                colors = MenuDefaults.itemColors(
+                    leadingIconColor = MaterialTheme.colorScheme.error
+                )
+            )
+        }
+    }
+}
+
+@Composable
 private fun ActivityCardControls(
     activity: com.grace.eva.domain.model.Activity,
     editedName: String,
@@ -229,8 +301,7 @@ private fun ActivityCardControls(
     onNameChange: (String) -> Unit,
     onNoteChange: (String) -> Unit,
     viewModel: TrackerViewModel,
-    onSaveSuccess: () -> Unit,
-    onDelete: () -> Unit
+    onSaveSuccess: () -> Unit
 ) {
     var beginText by remember(activity.begin) { mutableStateOf(formatTime(activity.begin)) }
     var formatError by remember { mutableStateOf(false) }
@@ -277,28 +348,18 @@ private fun ActivityCardControls(
     Spacer(modifier = Modifier.height(16.dp))
 
     Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth()
     ) {
-        OutlinedButton(
-            onClick = {
-                onDelete()
-          },
-            modifier = Modifier.weight(1f),
-            colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = MaterialTheme.colorScheme.error
-            ),
-            border = BorderStroke(
-                width = 1.dp,
-                color = MaterialTheme.colorScheme.error
-            )
-        ) {
-            Text(
-                text="Удалить",
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
+        ActivityCardHeaderDropdownMenu(
+            onInsertEmptyStageBefore = {
+                viewModel.onInsertEmptyStageBefore(activity)
+            },
+            onDelete = {
+                viewModel.onRemoveActivity(activity)
+            }
+        )
 
         Button(
             onClick = {
@@ -325,7 +386,7 @@ private fun ActivityCardControls(
                     }
                 )
             },
-            modifier = Modifier.weight(2f)
+            modifier = Modifier.weight(1f)
         ) {
             Text("Сохранить")
         }

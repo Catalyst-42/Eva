@@ -6,6 +6,7 @@ import com.grace.eva.domain.model.ActivityTemplate
 import com.grace.eva.domain.repository.MockTrackerRepository
 import com.grace.eva.domain.repository.TrackerRepository
 import com.grace.eva.domain.usecase.activity.CreateActivityUseCase
+import com.grace.eva.domain.usecase.activity.InsertEmptyActivityBeforeUseCase
 import com.grace.eva.domain.usecase.activity.RemoveActivityUseCase
 import com.grace.eva.domain.usecase.activity.UpdateActivityUseCase
 import com.grace.eva.domain.usecase.activity.template.AddActivityTemplateUseCase
@@ -161,6 +162,10 @@ class MockAppContainer(
     // Activity UseCases
     override val createActivityUseCase = object : CreateActivityUseCase(trackerRepository) {
         override suspend fun invoke(name: String) {}
+    }
+
+    override val insertEmptyActivityBeforeUseCase = object : InsertEmptyActivityBeforeUseCase(trackerRepository) {
+        override suspend fun invoke(activity: Activity) {}
     }
 
     override val removeActivityUseCase = object : RemoveActivityUseCase(trackerRepository) {
