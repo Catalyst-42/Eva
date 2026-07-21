@@ -300,7 +300,7 @@ fun EmptyActivitiesCard() {
 @Composable
 fun ActivitiesScreenPreview() {
     val mockViewModel = remember {
-        TrackerViewModel(appContainer = MockAppContainer(MockType.LARGE))
+        TrackerViewModel(appContainer = MockAppContainer(MockType.SIMPLE))
     }
 
     ActivityScreenContent(mockViewModel)

@@ -12,11 +12,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.DividerDefaults
@@ -28,8 +31,11 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.ViewAgenda
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -51,6 +57,8 @@ import com.grace.eva.util.formatTime
 import com.grace.eva.util.parseInstant
 import kotlinx.coroutines.delay
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
 fun ActivityCard(
@@ -66,6 +74,7 @@ fun ActivityCard(
     var isExpanded by remember { mutableStateOf(expanded) }
     var editedName by remember(activity.id) { mutableStateOf(activity.name) }
     var editedNote by remember(activity.id) { mutableStateOf(activity.note) }
+    var isTemplateNameDropdownExpanded by remember { mutableStateOf(false) }
 
     val state by viewModel.uiState.collectAsState()
     val currentSave = state.currentSave
@@ -164,7 +173,10 @@ fun ActivityCard(
                     viewModel = viewModel,
                     onSaveSuccess = {
                         isExpanded = false
-                    }
+                    },
+                    activityTemplates = state.activityTemplates,
+                    isDropdownExpanded = isTemplateNameDropdownExpanded,
+                    onDropdownExpandChange = { isTemplateNameDropdownExpanded = it }
                 )
             }
         }
@@ -184,7 +196,7 @@ private fun ActivityDurationText(
     LaunchedEffect(isActivityActive) {
         if (isActivityActive) {
             while (true) {
-                delay(1000L)
+                delay(1000L.milliseconds)
                 currentTime = Clock.System.now()
             }
         }
@@ -293,6 +305,86 @@ private fun ActivityCardHeaderDropdownMenu(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ActivityNameComboBox(
+    value: String,
+    onValueChange: (String) -> Unit,
+    activityTemplates: List<ActivityTemplate>,
+    isExpanded: Boolean,
+    onExpandChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var showDropdownButton by remember { mutableStateOf(false) }
+    
+    LaunchedEffect(activityTemplates.size) {
+        showDropdownButton = activityTemplates.isNotEmpty()
+    }
+    
+    ExposedDropdownMenuBox(
+        expanded = isExpanded,
+        onExpandedChange = {},
+        modifier = modifier
+    ) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            label = { Text("Название") },
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(),
+            singleLine = true,
+
+            // Select menu button
+            trailingIcon = {
+                if (showDropdownButton) {
+                    IconButton(
+                        onClick = { onExpandChange(true) }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ExpandMore,
+                            contentDescription = "Выбрать шаблон"
+                        )
+                    }
+                }
+            }
+        )
+        
+        if (showDropdownButton && isExpanded) {
+            ExposedDropdownMenu(
+                expanded = isExpanded,
+                onDismissRequest = { onExpandChange(false) },
+                modifier = Modifier
+                    .exposedDropdownSize()
+                    .verticalScroll(rememberScrollState())
+            ) {
+                activityTemplates.forEach { template ->
+                    DropdownMenuItem(
+                        text = {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Start
+                            ) {
+                                ActivityIcon(template, 16.dp)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = template.name,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        },
+                        onClick = {
+                            onValueChange(template.name)
+                            onExpandChange(false)
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
 @Composable
 private fun ActivityCardControls(
     activity: com.grace.eva.domain.model.Activity,
@@ -301,7 +393,10 @@ private fun ActivityCardControls(
     onNameChange: (String) -> Unit,
     onNoteChange: (String) -> Unit,
     viewModel: TrackerViewModel,
-    onSaveSuccess: () -> Unit
+    onSaveSuccess: () -> Unit,
+    activityTemplates: List<ActivityTemplate> = emptyList(),
+    isDropdownExpanded: Boolean = false,
+    onDropdownExpandChange: (Boolean) -> Unit = {}
 ) {
     var beginText by remember(activity.begin) { mutableStateOf(formatTime(activity.begin)) }
     var formatError by remember { mutableStateOf(false) }
@@ -328,12 +423,14 @@ private fun ActivityCardControls(
             } else null
         )
 
-        OutlinedTextField(
+        // Templates
+        ActivityNameComboBox(
             value = editedName,
             onValueChange = onNameChange,
-            label = { Text("Название") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
+            activityTemplates = activityTemplates,
+            isExpanded = isDropdownExpanded,
+            onExpandChange = onDropdownExpandChange,
+            modifier = Modifier.fillMaxWidth()
         )
 
         OutlinedTextField(
@@ -361,34 +458,39 @@ private fun ActivityCardControls(
             }
         )
 
-        Button(
-            onClick = {
-                val newBegin = parseInstant(beginText)
-                if (newBegin == null) {
-                    formatError = true
-                    return@Button
-                }
-
-                formatError = false
-                validationError = null
-
-                viewModel.onUpdateActivity(
-                    activity = activity,
-                    newName = editedName,
-                    newNote = editedNote,
-                    newBegin = newBegin,
-                    onError = { errorMessage ->
-                        validationError = errorMessage
-                    },
-                    onSuccess = {
-                        validationError = null
-                        onSaveSuccess()
-                    }
-                )
-            },
-            modifier = Modifier.weight(1f)
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Сохранить")
+            Button(
+                onClick = {
+                    val newBegin = parseInstant(beginText)
+                    if (newBegin == null) {
+                        formatError = true
+                        return@Button
+                    }
+
+                    formatError = false
+                    validationError = null
+
+                    viewModel.onUpdateActivity(
+                        activity = activity,
+                        newName = editedName,
+                        newNote = editedNote,
+                        newBegin = newBegin,
+                        onError = { errorMessage ->
+                            validationError = errorMessage
+                        },
+                        onSuccess = {
+                            validationError = null
+                            onSaveSuccess()
+                        }
+                    )
+                },
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("Сохранить")
+            }
         }
     }
 }
