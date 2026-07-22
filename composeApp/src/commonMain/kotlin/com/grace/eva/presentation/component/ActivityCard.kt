@@ -11,8 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandMore
@@ -25,6 +23,7 @@ import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -42,7 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -313,7 +312,6 @@ private fun ActivityNameComboBox(
     modifier: Modifier = Modifier
 ) {
     var showDropdownButton by remember { mutableStateOf(false) }
-    val focusManager = LocalFocusManager.current
 
     LaunchedEffect(activityTemplates.size) {
         showDropdownButton = activityTemplates.isNotEmpty()
@@ -321,70 +319,60 @@ private fun ActivityNameComboBox(
 
     ExposedDropdownMenuBox(
         expanded = isExpanded,
-        onExpandedChange = {},
+        onExpandedChange = {
+            onExpandChange(it)
+        },
         modifier = modifier
     ) {
         OutlinedTextField(
             value = value,
-            onValueChange = onValueChange,
-            label = { Text("Название") },
+            onValueChange = { onValueChange(it) },
             modifier = Modifier
-                .fillMaxWidth()
-                .menuAnchor(),
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable, true)
+                .fillMaxWidth(),
+            label = { Text("Название") },
             singleLine = true,
-
-            // Select menu button
             trailingIcon = {
                 if (showDropdownButton) {
-                    IconButton(
-                        onClick = {
-                            if (isExpanded) {
-                                focusManager.clearFocus()
-                            }
-                            onExpandChange(!isExpanded)
-                        }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.ExpandMore,
-                            contentDescription = "Выбрать шаблон"
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Default.ExpandMore,
+                        contentDescription = if (isExpanded) "Скрыть список" else "Показать список"
+                    )
                 }
             }
         )
 
-        if (showDropdownButton && isExpanded) {
-            ExposedDropdownMenu(
-                expanded = isExpanded,
-                onDismissRequest = { onExpandChange(false) },
-                modifier = Modifier
-                    .exposedDropdownSize()
-                    .verticalScroll(rememberScrollState())
-            ) {
-                activityTemplates.forEach { template ->
-                    DropdownMenuItem(
-                        text = {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Start
-                            ) {
-                                ActivityIcon(template, 16.dp)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = template.name,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
-                        },
-                        onClick = {
-                            onValueChange(template.name)
-                            focusManager.clearFocus()
-                            onExpandChange(false)
+        ExposedDropdownMenu(
+            expanded = isExpanded,
+            onDismissRequest = {
+                onExpandChange(false)
+            },
+            modifier = Modifier
+                .exposedDropdownSize()
+                .fillMaxWidth()
+        ) {
+            activityTemplates.forEach { template ->
+                DropdownMenuItem(
+                    text = {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Start
+                        ) {
+                            ActivityIcon(template, 16.dp)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = template.name,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
                         }
-                    )
-                }
+                    },
+                    onClick = {
+                        onValueChange(template.name)
+                        onExpandChange(false)
+                    }
+                )
             }
         }
     }

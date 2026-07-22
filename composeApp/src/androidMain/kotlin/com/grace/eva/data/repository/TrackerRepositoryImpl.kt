@@ -1,7 +1,6 @@
 package com.grace.eva.data.repository
 
 import android.content.Context
-import android.util.Log
 import androidx.core.content.FileProvider
 import com.grace.eva.domain.model.Activity
 import com.grace.eva.domain.model.ActivityTemplate
@@ -28,11 +27,9 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
 import kotlin.time.Clock
-import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Instant
 import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
 
 private const val TRACKER_CONFIG_FILE = "tracker.json"
 private const val SAVES_DIRECTORY = "saves"
@@ -196,29 +193,28 @@ class TrackerRepositoryImpl(
         val current = _currentSave.value ?: return
         val activities = current.activities
         val index = activities.indexOfFirst { it.id == activity.id }
-        
+
         if (index <= 0) {
-            // Если это первый этап, создаем новый на час раньше
             val newBegin = activity.begin.minus(1.hours)
             val newActivity = Activity(name = "Активность", begin = newBegin)
             val updatedSave = current.copy(
                 activities = (listOf(newActivity) + activities).toMutableList()
             )
             updateSave(updatedSave)
-        } else {
-            // Иначе создаем между предыдущим и текущим
-            val previousActivity = activities[index - 1]
-            val newBegin = Instant.fromEpochMilliseconds(
-                (previousActivity.begin.toEpochMilliseconds() + activity.begin.toEpochMilliseconds()) / 2
-            )
-            val newActivity = Activity(name = "Активность", begin = newBegin)
-            
-            val updatedActivities = activities.toMutableList()
-            updatedActivities.add(index, newActivity)
-            
-            val updatedSave = current.copy(activities = updatedActivities)
-            updateSave(updatedSave)
+            return
         }
+
+        val previousActivity = activities[index - 1]
+        val newBegin = Instant.fromEpochMilliseconds(
+            (previousActivity.begin.toEpochMilliseconds() + activity.begin.toEpochMilliseconds()) / 2
+        )
+        val newActivity = Activity(name = "Активность", begin = newBegin)
+
+        val updatedActivities = activities.toMutableList()
+        updatedActivities.add(index, newActivity)
+
+        val updatedSave = current.copy(activities = updatedActivities)
+        updateSave(updatedSave)
     }
 
     override suspend fun removeActivity(activity: Activity) {
@@ -404,7 +400,11 @@ class TrackerRepositoryImpl(
 
             val requestBody = MultipartBody.Builder()
                 .setType(MultipartBody.FORM)
-                .addFormDataPart("file", "${save.id}.json", jsonString.toRequestBody("application/json".toMediaType()))
+                .addFormDataPart(
+                    "file",
+                    "${save.id}.json",
+                    jsonString.toRequestBody("application/json".toMediaType())
+                )
                 .build()
 
             val request = Request.Builder()
@@ -461,7 +461,8 @@ class TrackerRepositoryImpl(
     }
 
     private fun getBaseUrl(): String? {
-        return normalizeBaseUrl(_tracker.value.remoteServerUrl).ifBlank { "" }.takeIf { it.isNotBlank() }
+        return normalizeBaseUrl(_tracker.value.remoteServerUrl).ifBlank { "" }
+            .takeIf { it.isNotBlank() }
     }
 
     private fun normalizeBaseUrl(url: String): String {
