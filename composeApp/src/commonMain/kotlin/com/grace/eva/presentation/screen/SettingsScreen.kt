@@ -24,7 +24,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Archive
-import androidx.compose.material.icons.filled.SettingsEthernet
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -55,8 +55,8 @@ import com.grace.eva.di.AppContainer
 import com.grace.eva.di.MockAppContainer
 import com.grace.eva.di.MockType
 import com.grace.eva.presentation.component.SaveCard
+import com.grace.eva.presentation.screen.floating.AdditionalSettingsScreen
 import com.grace.eva.presentation.screen.floating.ArchivedSavesScreen
-import com.grace.eva.presentation.screen.floating.RemoteConnectionsScreen
 import com.grace.eva.presentation.viewmodel.TrackerViewModel
 import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem
@@ -85,8 +85,8 @@ fun SettingsScreenContent(
     val allSaves = state.allSaves
     val activeSaves = remember(allSaves) { allSaves.filterNot { it.isArchived } }
     val archivedSaves = remember(allSaves) { allSaves.filter { it.isArchived } }
-    var showRemoteConnectionsScreen by rememberSaveable { mutableStateOf(false) }
     var showArchivedSavesScreen by rememberSaveable { mutableStateOf(false) }
+    var showAdditionalSettingsScreen by rememberSaveable { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val hapticFeedback = LocalHapticFeedback.current
@@ -98,7 +98,7 @@ fun SettingsScreenContent(
 
     Box(modifier = Modifier.fillMaxSize()) {
         AnimatedVisibility(
-            visible = !showRemoteConnectionsScreen && !showArchivedSavesScreen,
+            visible = !showAdditionalSettingsScreen && !showArchivedSavesScreen,
             enter = fadeIn(),
             exit = fadeOut()
         ) {
@@ -132,12 +132,12 @@ fun SettingsScreenContent(
                         }
 
                         IconButton(
-                            onClick = { showRemoteConnectionsScreen = true },
+                            onClick = { showAdditionalSettingsScreen = true },
                             modifier = Modifier.size(32.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.SettingsEthernet,
-                                contentDescription = "Настроить удалённые подключения",
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = "Дополнительные настройки",
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -228,14 +228,14 @@ fun SettingsScreenContent(
         }
 
         AnimatedVisibility(
-            visible = showRemoteConnectionsScreen, enter = slideInHorizontally(
+            visible = showAdditionalSettingsScreen, enter = slideInHorizontally(
                 initialOffsetX = { it }, animationSpec = tween(300)
             ) + fadeIn(), exit = slideOutHorizontally(
                 targetOffsetX = { it }, animationSpec = tween(300)
             ) + fadeOut()
         ) {
-            RemoteConnectionsScreen(
-                viewModel = viewModel, onClose = { showRemoteConnectionsScreen = false })
+            AdditionalSettingsScreen(
+                viewModel = viewModel, onClose = { showAdditionalSettingsScreen = false })
         }
 
         AnimatedVisibility(

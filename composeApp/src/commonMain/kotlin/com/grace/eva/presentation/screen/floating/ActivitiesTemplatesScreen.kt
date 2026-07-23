@@ -30,7 +30,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -49,7 +48,6 @@ private val TemplateListBottomPadding = 320.dp
 fun TemplateManagementScreen(
     activityTemplates: List<ActivityTemplate>, viewModel: TrackerViewModel, onClose: () -> Unit
 ) {
-    val keyboardController = LocalSoftwareKeyboardController.current
     val hapticFeedback = LocalHapticFeedback.current
     val lazyListState = rememberLazyListState()
     val reorderableLazyListState = rememberReorderableLazyListState(lazyListState) { from, to ->
@@ -74,7 +72,6 @@ fun TemplateManagementScreen(
 
             IconButton(
                 onClick = {
-                    keyboardController?.hide()
                     onClose()
                 }, modifier = Modifier.size(32.dp)
             ) {
@@ -120,7 +117,8 @@ fun TemplateManagementScreen(
                             onDragStopped = {
                                 hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureEnd)
                             }),
-                        interactionSource = interactionSource)
+                        interactionSource = interactionSource
+                    )
                 }
             }
 

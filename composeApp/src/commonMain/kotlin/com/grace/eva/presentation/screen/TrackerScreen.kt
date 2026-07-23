@@ -227,6 +227,7 @@ private fun TimelineSection(
     currentSave: Save?, isSaveActive: Boolean, viewModel: TrackerViewModel
 ) {
     val activities = currentSave?.activities ?: emptyList()
+    val barHeight = viewModel.uiState.value.tracker.weeklyTimelineHeight.dp
 
     ActivitiesMapChart(
         activities = activities,
@@ -238,6 +239,7 @@ private fun TimelineSection(
         getActivityTemplateIsHidden = { name ->
             viewModel.getActivityTemplateIsHidden(name)
         },
+        barHeight = barHeight,
         modifier = Modifier.fillMaxWidth()
     )
 }

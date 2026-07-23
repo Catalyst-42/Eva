@@ -1,6 +1,5 @@
 package com.grace.eva.data.repository
 
-import androidx.compose.ui.autofill.ContentType
 import com.grace.eva.di.IosRootController
 import com.grace.eva.domain.model.Activity
 import com.grace.eva.domain.model.ActivityTemplate
@@ -18,60 +17,42 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.forms.MultiPartFormDataContent
 import io.ktor.client.request.forms.formData
 import io.ktor.client.request.get
-import io.ktor.client.request.header
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
-import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.usePinned
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
 import kotlinx.datetime.Instant
+import kotlinx.serialization.json.Json
 import platform.Foundation.NSData
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
-import platform.Foundation.NSItemProvider
-import platform.Foundation.NSMutableURLRequest
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSURL
-import platform.Foundation.NSURLSession
 import platform.Foundation.NSUserDomainMask
 import platform.Foundation.create
 import platform.Foundation.dataWithContentsOfFile
 import platform.Foundation.getBytes
-import platform.Foundation.setHTTPMethod
 import platform.Foundation.writeToFile
 import platform.UIKit.UIActivityViewController
-import platform.UIKit.UIApplication
-import platform.UIKit.UIDocumentPickerDelegateProtocol
-import platform.UIKit.UIDocumentPickerMode
-import platform.UIKit.UIDocumentPickerViewController
 import platform.UIKit.UIImpactFeedbackGenerator
 import platform.UIKit.UIImpactFeedbackStyle
-import platform.UIKit.UIViewController
-import platform.darwin.NSObject
 import kotlin.time.Clock
-import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
 import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
 
 private const val TRACKER_CONFIG_FILE = "tracker.json"
 private const val SAVES_DIRECTORY = "saves"
@@ -281,7 +262,7 @@ class TrackerRepositoryImpl : TrackerRepository {
         val current = _currentSave.value ?: return
         val activities = current.activities
         val index = activities.indexOfFirst { it.id == activity.id }
-        
+
         if (index <= 0) {
             val newBegin = activity.begin.minus(1.hours)
             val newActivity = Activity(name = "Активность", begin = newBegin)
@@ -436,6 +417,11 @@ class TrackerRepositoryImpl : TrackerRepository {
         saveTrackerConfig()
     }
 
+    override suspend fun updateWeeklyTimelineHeight(height: Int) {
+        _tracker.update { it.copy(weeklyTimelineHeight = height) }
+        saveTrackerConfig()
+    }
+
     override suspend fun testRemoteServerConnection(): ConnectionCheckResult {
         return testConnection(
             title = "Сервер",
@@ -472,15 +458,16 @@ class TrackerRepositoryImpl : TrackerRepository {
             val response = client.put("$baseUrl/api/saves/${save.id}/") {
                 setBody(
                     MultiPartFormDataContent(
-                    formData {
-                        append("file", jsonString, Headers.build {
-                            append(HttpHeaders.ContentType, "application/json")
-                            append(
-                                HttpHeaders.ContentDisposition,
-                                "form-data; name=\"file\"; filename=\"${save.id}.json\""
-                            )
+                        formData {
+                            append("file", jsonString, Headers.build {
+                                append(HttpHeaders.ContentType, "application/json")
+                                append(
+                                    HttpHeaders.ContentDisposition,
+                                    "form-data; name=\"file\"; filename=\"${save.id}.json\""
+                                )
+                            })
                         })
-                    }))
+                )
             }
             if (response.status.value !in 200..299) {
                 throw IllegalStateException("Ошибка синхронизации: HTTP ${response.status.value}")
@@ -536,7 +523,8 @@ class TrackerRepositoryImpl : TrackerRepository {
     }
 
     private fun getBaseUrl(): String? {
-        return normalizeBaseUrl(_tracker.value.remoteServerUrl).ifBlank { "" }.takeIf { it.isNotBlank() }
+        return normalizeBaseUrl(_tracker.value.remoteServerUrl).ifBlank { "" }
+            .takeIf { it.isNotBlank() }
     }
 
     private fun normalizeBaseUrl(url: String): String {

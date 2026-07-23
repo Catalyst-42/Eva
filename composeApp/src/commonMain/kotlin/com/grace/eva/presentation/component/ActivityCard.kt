@@ -2,13 +2,16 @@ package com.grace.eva.presentation.component
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
@@ -41,9 +44,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.grace.eva.di.MockAppContainer
 import com.grace.eva.di.MockType
@@ -301,7 +306,6 @@ private fun ActivityCardHeaderDropdownMenu(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ActivityNameComboBox(
     value: String,
@@ -312,44 +316,48 @@ private fun ActivityNameComboBox(
     modifier: Modifier = Modifier
 ) {
     var showDropdownButton by remember { mutableStateOf(false) }
+    var textFieldWidthPx by remember { mutableStateOf(0) }
+    var textFieldHeightPx by remember { mutableStateOf(0) }
+    val density = LocalDensity.current
 
     LaunchedEffect(activityTemplates.size) {
         showDropdownButton = activityTemplates.isNotEmpty()
     }
 
-    ExposedDropdownMenuBox(
-        expanded = isExpanded,
-        onExpandedChange = {
-            onExpandChange(it)
-        },
-        modifier = modifier
-    ) {
+    Box(modifier = modifier) {
         OutlinedTextField(
             value = value,
             onValueChange = { onValueChange(it) },
             modifier = Modifier
-                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable, true)
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .onGloballyPositioned { coordinates ->
+                    textFieldWidthPx = coordinates.size.width
+                },
             label = { Text("Название") },
             singleLine = true,
             trailingIcon = {
                 if (showDropdownButton) {
                     Icon(
                         imageVector = Icons.Default.ExpandMore,
-                        contentDescription = if (isExpanded) "Скрыть список" else "Показать список"
+                        contentDescription = if (isExpanded) "Скрыть список" else "Показать список",
+                        modifier = Modifier.clickable {
+                            onExpandChange(!isExpanded)
+                        }
                     )
                 }
             }
         )
 
-        ExposedDropdownMenu(
+        DropdownMenu(
             expanded = isExpanded,
-            onDismissRequest = {
-                onExpandChange(false)
-            },
+            onDismissRequest = { onExpandChange(false) },
+            offset = DpOffset(
+                x = 0.dp,
+                y = with(density) { textFieldHeightPx.toDp() }
+            ),
             modifier = Modifier
-                .exposedDropdownSize()
-                .fillMaxWidth()
+                .width(with(density) { textFieldWidthPx.toDp() })
+                .heightIn(max = 200.dp)
         ) {
             activityTemplates.forEach { template ->
                 DropdownMenuItem(

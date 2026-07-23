@@ -3,7 +3,16 @@ package com.grace.eva.presentation.component.chart
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -11,19 +20,23 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.TextLayoutInput
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
@@ -39,12 +52,16 @@ import com.grace.eva.domain.model.Activity
 import com.grace.eva.presentation.viewmodel.TrackerViewModel
 import com.grace.eva.util.formatDuration
 import kotlinx.coroutines.delay
-import kotlinx.datetime.*
+import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
-import kotlin.collections.forEachIndexed
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.minus
+import kotlinx.datetime.number
+import kotlinx.datetime.plus
+import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Clock.System
-import kotlin.time.Duration.Companion.days
-import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.DurationUnit
 import kotlin.time.Instant
 import kotlin.time.toDuration
@@ -72,6 +89,7 @@ fun ActivitiesMapChart(
     saveEnd: Instant? = null,
     getColorForActivity: (String) -> Color,
     getActivityTemplateIsHidden: (String) -> Boolean,
+    barHeight: Dp = 220.dp,
     modifier: Modifier = Modifier
 ) {
     if (activities.isEmpty()) return
@@ -88,7 +106,7 @@ fun ActivitiesMapChart(
             val nowLocal = now.toLocalDateTime(timeZone)
             val nextMidnight = nowLocal.date.plus(1, DateTimeUnit.DAY).atStartOfDayIn(timeZone)
             val millisUntilMidnight = (nextMidnight - now).inWholeMilliseconds
-            delay(millisUntilMidnight)
+            delay(millisUntilMidnight.milliseconds)
             currentTime = System.now()
         }
     }
@@ -156,20 +174,19 @@ fun ActivitiesMapChart(
     }
 
     // Build timelines for each day of the week
-    val daysTimeline = remember(activities, currentTime, isSaveCompleted, saveEnd, weekDays, timeZone) {
-        buildWeekDaysTimeline(
-            activities = activities,
-            currentTime = currentTime,
-            isSaveCompleted = isSaveCompleted,
-            saveEnd = saveEnd,
-            getColorForActivity = getColorForActivity,
-            getActivityTemplateIsHidden = getActivityTemplateIsHidden,
-            weekDays = weekDays,
-            timeZone = timeZone
-        )
-    }
-
-    val barHeight = 220.dp
+    val daysTimeline =
+        remember(activities, currentTime, isSaveCompleted, saveEnd, weekDays, timeZone) {
+            buildWeekDaysTimeline(
+                activities = activities,
+                currentTime = currentTime,
+                isSaveCompleted = isSaveCompleted,
+                saveEnd = saveEnd,
+                getColorForActivity = getColorForActivity,
+                getActivityTemplateIsHidden = getActivityTemplateIsHidden,
+                weekDays = weekDays,
+                timeZone = timeZone
+            )
+        }
 
     Column(
         modifier = modifier.fillMaxWidth()
@@ -227,7 +244,7 @@ fun ActivitiesMapChart(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            daysTimeline.forEachIndexed { index, day ->
+            daysTimeline.forEachIndexed { _, day ->
                 key(day.date) {
                     WeekDayBar(
                         dayTimeline = day,
@@ -262,11 +279,11 @@ private fun RepeatableIconButton(
             return@LaunchedEffect
         }
 
-        delay(initialDelayMillis)
+        delay(initialDelayMillis.milliseconds)
         while (enabled && isPressedState.value) {
             repeatedDuringCurrentPress = true
             onStep()
-            delay(repeatIntervalMillis)
+            delay(repeatIntervalMillis.milliseconds)
         }
     }
 
@@ -307,7 +324,7 @@ private fun WeekDayBar(
     LaunchedEffect(hasActiveSegment) {
         if (hasActiveSegment) {
             while (true) {
-                delay(1000L)
+                delay(1000L.milliseconds)
                 currentTime = System.now()
             }
         }
@@ -501,7 +518,10 @@ private fun WeekDayBar(
                             canvas.nativeCanvas.apply {
                                 drawText(
                                     textLayoutResult = textLayoutResult,
-                                    topLeft = Offset(centerX - textLayoutResult.size.width / 2, centerY),
+                                    topLeft = Offset(
+                                        centerX - textLayoutResult.size.width / 2,
+                                        centerY
+                                    ),
                                     color = Color.Black
                                 )
                             }
@@ -578,12 +598,14 @@ private fun buildWeekDaysTimeline(
             }
 
             val midnight = currentDate.plus(1, DateTimeUnit.DAY).atStartOfDayIn(timeZone)
-            val startHour = startDateTime.hour + startDateTime.minute / 60f + startDateTime.second / 3600f
+            val startHour =
+                startDateTime.hour + startDateTime.minute / 60f + startDateTime.second / 3600f
 
             if (endTime <= midnight) {
                 // Last day of this activity
                 val endDateTime = endTime.toLocalDateTime(timeZone)
-                var endHour = endDateTime.hour + endDateTime.minute / 60f + endDateTime.second / 3600f
+                var endHour =
+                    endDateTime.hour + endDateTime.minute / 60f + endDateTime.second / 3600f
 
                 // If endHour is 0 (midnight), it means the activity ends exactly at midnight
                 // We should show a full day segment (to 24) or a zero-length segment?
@@ -638,7 +660,9 @@ private fun buildWeekDaysTimeline(
 }
 
 private fun formatDate(date: LocalDate): String {
-    return "${date.day.toString().padStart(2, '0')}.${date.month.number.toString().padStart(2, '0')}"
+    return "${date.day.toString().padStart(2, '0')}.${
+        date.month.number.toString().padStart(2, '0')
+    }"
 }
 
 @Preview(showBackground = true)
@@ -658,7 +682,11 @@ private fun PreviewActivitiesMapChart() {
                 isSaveCompleted = currentSave?.end != null,
                 saveEnd = currentSave?.end,
                 getColorForActivity = { name -> mockViewModel.getColorForActivity(name) },
-                getActivityTemplateIsHidden = { name -> mockViewModel.getActivityTemplateIsHidden(name) },
+                getActivityTemplateIsHidden = { name ->
+                    mockViewModel.getActivityTemplateIsHidden(
+                        name
+                    )
+                },
                 modifier = Modifier.fillMaxWidth()
             )
         }

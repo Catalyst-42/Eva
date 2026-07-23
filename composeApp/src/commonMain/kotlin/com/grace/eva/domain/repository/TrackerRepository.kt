@@ -1,9 +1,9 @@
 package com.grace.eva.domain.repository
 
-import com.grace.eva.domain.model.Save
 import com.grace.eva.domain.model.Activity
 import com.grace.eva.domain.model.ActivityTemplate
 import com.grace.eva.domain.model.ConnectionCheckResult
+import com.grace.eva.domain.model.Save
 import com.grace.eva.domain.model.Tracker
 import kotlinx.coroutines.flow.Flow
 
@@ -33,6 +33,7 @@ interface TrackerRepository {
     suspend fun importSave()
 
     suspend fun updateRemoteServerUrl(url: String)
+    suspend fun updateWeeklyTimelineHeight(height: Int)
     suspend fun testRemoteServerConnection(): ConnectionCheckResult
     suspend fun syncSaveWithServer(save: Save)
 }

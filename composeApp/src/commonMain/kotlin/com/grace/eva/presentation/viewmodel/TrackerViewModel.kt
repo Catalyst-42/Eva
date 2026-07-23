@@ -22,8 +22,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.reflect.KClass
 import kotlin.time.Clock
-import kotlin.time.Duration
-import kotlin.time.Duration.Companion.hours
 import kotlin.time.Instant
 
 data class TrackerUiState(
@@ -70,7 +68,7 @@ class TrackerViewModel(
                 )
             }.collect { state ->
                 _uiState.value = state
-                
+
                 // Find the most recent activity (latest begin time)
                 val currentSave = state.currentSave
                 val currentActivity = currentSave?.activities?.maxByOrNull { it.begin }
@@ -188,6 +186,12 @@ class TrackerViewModel(
         }
     }
 
+    fun onUpdateWeeklyTimelineHeight(height: Int) {
+        viewModelScope.launch {
+            appContainer.trackerRepository.updateWeeklyTimelineHeight(height)
+        }
+    }
+
     fun onTestRemoteServerConnection(url: String? = null) {
         runConnectionCheck {
             if (url != null) {
@@ -236,6 +240,7 @@ class TrackerViewModel(
             onSuccess()
         }
     }
+
     // Activity logic
     fun onUpdateActivity(
         activity: Activity, newName: String, newNote: String, newBegin: Instant,

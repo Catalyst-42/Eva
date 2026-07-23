@@ -33,6 +33,7 @@ class MockTrackerRepository : TrackerRepository {
     override suspend fun exportSave(save: Save) {}
     override suspend fun importSave() {}
     override suspend fun updateRemoteServerUrl(url: String) {}
+    override suspend fun updateWeeklyTimelineHeight(height: Int) {}
     override suspend fun testRemoteServerConnection(): ConnectionCheckResult =
         ConnectionCheckResult("Server", true, "Fine")
     override suspend fun syncSaveWithServer(save: Save) {}

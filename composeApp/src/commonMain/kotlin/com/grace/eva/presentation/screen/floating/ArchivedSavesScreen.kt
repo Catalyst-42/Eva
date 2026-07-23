@@ -31,7 +31,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -50,7 +49,6 @@ fun ArchivedSavesScreen(
     saves: List<Save>, viewModel: TrackerViewModel, onClose: () -> Unit,
     onMessage: (String) -> Unit = {}
 ) {
-    val keyboardController = LocalSoftwareKeyboardController.current
     val hapticFeedback = LocalHapticFeedback.current
     val lazyListState = rememberLazyListState()
     val reorderableLazyListState = rememberReorderableLazyListState(lazyListState) { from, to ->
@@ -74,7 +72,6 @@ fun ArchivedSavesScreen(
 
             IconButton(
                 onClick = {
-                    keyboardController?.hide()
                     onClose()
                 }, modifier = Modifier.size(32.dp)
             ) {
@@ -131,7 +128,8 @@ fun ArchivedSavesScreen(
                                     hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureEnd)
                                 }),
                             interactionSource = interactionSource,
-                            onMessage = onMessage)
+                            onMessage = onMessage
+                        )
                     }
                 }
             }

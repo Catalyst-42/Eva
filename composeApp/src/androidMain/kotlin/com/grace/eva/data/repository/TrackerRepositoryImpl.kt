@@ -341,6 +341,11 @@ class TrackerRepositoryImpl(
         saveTrackerConfig()
     }
 
+    override suspend fun updateWeeklyTimelineHeight(height: Int) {
+        _tracker.update { it.copy(weeklyTimelineHeight = height) }
+        saveTrackerConfig()
+    }
+
     override suspend fun testRemoteServerConnection(): ConnectionCheckResult {
         return testConnection(
             title = "Сервер",
