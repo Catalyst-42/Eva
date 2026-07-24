@@ -378,8 +378,7 @@ class TrackerRepositoryImpl(
             response.use {
                 when {
                     it.isSuccessful -> {
-                        val jsonString = it.body?.string()
-                            ?: throw IllegalStateException("Сервер не вернул данные сохранения")
+                        val jsonString = it.body.string()
                         return@withContext json.decodeFromString<Save>(jsonString)
                     }
 

@@ -1,4 +1,3 @@
-import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -12,7 +11,7 @@ plugins {
 kotlin {
     androidTarget {
         compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_11)
+            jvmTarget.set(JvmTarget.JVM_25)
         }
     }
     
@@ -32,7 +31,7 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.activity.compose)
-            implementation("com.squareup.okhttp3:okhttp:4.12.0")
+            implementation(libs.okhttp)
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)
@@ -44,25 +43,21 @@ kotlin {
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(libs.reorderable)
-            implementation("org.jetbrains.androidx.navigation:navigation-compose:2.9.2")
-            implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.10.0")
+            implementation(libs.navigation.compose)
+            implementation(libs.kotlinx.serialization.json)
             api(libs.androidx.lifecycle.viewmodel)
-            implementation("org.jetbrains.compose.material:material-icons-extended:1.7.3")
-            // implementation("androidx.compose.material3.adaptive:adaptive:1.3.0-alpha09")
-            // implementation("androidx.compose.material3.adaptive:adaptive-layout:1.3.0-alpha09")
-            // implementation("androidx.compose.material3.adaptive:adaptive-navigation:1.3.0-alpha09")
-            // implementation("org.jetbrains.androidx.compose.material3:material3-adaptive-navigation-suite:1.0.0-alpha07")
-            implementation("org.jetbrains.compose.material3:material3-adaptive-navigation-suite:1.9.0")
-            implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.7.1")
-            implementation("io.github.vinceglb:filekit-core:0.13.0")
-            implementation("io.github.vinceglb:filekit-dialogs:0.13.0")
-            implementation("io.github.vinceglb:filekit-dialogs-compose:0.13.0")
+            implementation(libs.material.icons.extended)
+            implementation(libs.material3.adaptive.navigation.suite)
+            implementation(libs.kotlinx.datetime)
+            implementation(libs.filekit.core)
+            implementation(libs.filekit.dialogs)
+            implementation(libs.filekit.dialogs.compose)
         }
         iosMain.dependencies {
-            implementation("io.ktor:ktor-client-core:2.3.12")
-            implementation("io.ktor:ktor-client-darwin:2.3.12")
-            implementation("io.ktor:ktor-client-content-negotiation:2.3.12")
-            implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.12")
+            implementation(libs.ktor.client.core)
+            implementation(libs.ktor.client.darwin)
+            implementation(libs.ktor.client.content.negotiation)
+            implementation(libs.ktor.serialization.kotlinx.json)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -92,8 +87,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_25
+        targetCompatibility = JavaVersion.VERSION_25
     }
 }
 

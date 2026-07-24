@@ -35,7 +35,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
-import kotlinx.datetime.Instant
 import kotlinx.serialization.json.Json
 import platform.Foundation.NSData
 import platform.Foundation.NSDocumentDirectory
@@ -52,6 +51,7 @@ import platform.UIKit.UIImpactFeedbackGenerator
 import platform.UIKit.UIImpactFeedbackStyle
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.uuid.ExperimentalUuidApi
 
 private const val TRACKER_CONFIG_FILE = "tracker.json"
@@ -274,7 +274,7 @@ class TrackerRepositoryImpl : TrackerRepository {
         }
 
         val previousActivity = activities[index - 1]
-        val newBegin = Instant.fromEpochMilliseconds(
+        val newBegin = kotlin.time.Instant.fromEpochMilliseconds(
             (previousActivity.begin.toEpochMilliseconds() + activity.begin.toEpochMilliseconds()) / 2
         )
         val newActivity = Activity(name = "Активность", begin = newBegin)
@@ -365,7 +365,7 @@ class TrackerRepositoryImpl : TrackerRepository {
         )
 
         withContext(Dispatchers.Main) {
-            delay(100)
+            delay(100.milliseconds)
 
             val topController = IosRootController.rootViewController ?: return@withContext
 
