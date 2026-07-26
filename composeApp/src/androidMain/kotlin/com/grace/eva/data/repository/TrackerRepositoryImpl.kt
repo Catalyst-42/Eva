@@ -1,6 +1,9 @@
 package com.grace.eva.data.repository
 
 import android.content.Context
+import android.os.VibrationEffect
+import android.os.Vibrator
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import com.grace.eva.domain.model.Activity
 import com.grace.eva.domain.model.ActivityTemplate
@@ -51,6 +54,16 @@ class TrackerRepositoryImpl(
         loadTrackerData()
     }
 
+    private fun triggerHaptic() {
+        val vibrator = ContextCompat.getSystemService(context, Vibrator::class.java)
+        vibrator?.let {
+            if (it.hasVibrator()) {
+                val effect = VibrationEffect.createOneShot(35, VibrationEffect.DEFAULT_AMPLITUDE)
+                vibrator.vibrate(effect)
+            }
+        }
+    }
+
     private fun getTrackerConfigFile(): File {
         return File(context.filesDir, TRACKER_CONFIG_FILE)
     }
@@ -97,6 +110,14 @@ class TrackerRepositoryImpl(
         _currentSave.value = saves.find { it.id == config.currentSaveId } ?: saves.firstOrNull()
     }
 
+    @OptIn(ExperimentalUuidApi::class)
+    private fun writeToFile(content: String, filePath: String): Boolean {
+        val file = File(filePath)
+        file.writeText(content)
+        triggerHaptic()
+        return true
+    }
+
     private fun saveTrackerConfig() {
         val meta = _tracker.value.copy(
             saves = _allSaves.value.map { it.id },
@@ -105,14 +126,13 @@ class TrackerRepositoryImpl(
         _tracker.value = meta
         val configFile = getTrackerConfigFile()
         val jsonString = json.encodeToString(meta)
-
-        configFile.writeText(jsonString)
+        writeToFile(jsonString, configFile.absolutePath)
     }
 
     private fun writeSaveToFile(save: Save) {
         val file = getSaveFile(save.id)
         val jsonString = json.encodeToString(save)
-        file.writeText(jsonString)
+        writeToFile(jsonString, file.absolutePath)
     }
 
     private fun deleteSaveFile(save: Save) {
