@@ -85,13 +85,13 @@ fun TemplateManagementScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // List of templates
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             state = lazyListState,
             verticalArrangement = Arrangement.spacedBy(16.dp),
             contentPadding = PaddingValues(bottom = TemplateListBottomPadding)
         ) {
-            // List of templates
             items(
                 items = activityTemplates, key = { template -> template.id }) { template ->
                 ReorderableItem(

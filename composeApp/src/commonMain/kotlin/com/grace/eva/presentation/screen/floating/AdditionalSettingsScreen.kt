@@ -5,8 +5,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -39,7 +41,7 @@ import com.grace.eva.di.MockAppContainer
 import com.grace.eva.di.MockType
 import com.grace.eva.presentation.viewmodel.TrackerViewModel
 
-private val BottomPadding = 320.dp
+private val AdditionalSettingsBottomPadding = 320.dp
 
 @Composable
 fun AdditionalSettingsScreen(
@@ -61,213 +63,216 @@ fun AdditionalSettingsScreen(
         weeklyTimelineHeightInput = state.tracker.weeklyTimelineHeight.toString()
     }
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp)
-            .padding(top = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        contentPadding = PaddingValues(bottom = BottomPadding)
+    Column(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp).padding(top = 16.dp)
     ) {
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Дополнительные настройки",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
+        // Header
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Дополнительные настройки",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
 
-                IconButton(
-                    onClick = {
-                        onClose()
-                    },
-                    modifier = Modifier.size(32.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Закрыть",
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
+            IconButton(
+                onClick = {
+                    onClose()
+                },
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Закрыть",
+                    modifier = Modifier.size(20.dp)
+                )
             }
         }
 
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
-                )
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Text(
-                        text = "Подключение к серверу",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+        Spacer(modifier = Modifier.height(16.dp))
 
-                    OutlinedTextField(
-                        value = remoteServerUrl,
-                        onValueChange = { remoteServerUrl = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        label = { Text("Адрес удалённого сервера") }
-                    )
-
-                    Button(
-                        onClick = {
-                            keyboardController?.hide()
-                            viewModel.onUpdateRemoteServerUrl(remoteServerUrl)
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Сохранить адрес сервера")
-                    }
-
-                    Button(
-                        onClick = {
-                            keyboardController?.hide()
-                            viewModel.onTestRemoteServerConnection(remoteServerUrl)
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !state.isCheckingConnection
-                    ) {
-                        Text(if (state.isCheckingConnection) "Проверка..." else "Проверить сервер")
-                    }
-                }
-            }
-        }
-
-        state.lastConnectionCheck?.let { result ->
+        // Settings
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(bottom = AdditionalSettingsBottomPadding)
+        ) {
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
-                        containerColor = if (result.isSuccess) {
-                            MaterialTheme.colorScheme.primaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.errorContainer
-                        }
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
                     )
                 ) {
                     Column(
                         modifier = Modifier.padding(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         Text(
-                            text = result.title,
-                            style = MaterialTheme.typography.titleSmall,
-                            color = if (result.isSuccess) {
-                                MaterialTheme.colorScheme.onPrimaryContainer
-                            } else {
-                                MaterialTheme.colorScheme.onErrorContainer
-                            }
+                            text = "Подключение к серверу",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
-                        Text(
-                            text = result.message,
-                            color = if (result.isSuccess) {
-                                MaterialTheme.colorScheme.onPrimaryContainer
-                            } else {
-                                MaterialTheme.colorScheme.onErrorContainer
-                            }
+
+                        OutlinedTextField(
+                            value = remoteServerUrl,
+                            onValueChange = { remoteServerUrl = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            label = { Text("Адрес удалённого сервера") }
                         )
-                    }
-                }
-            }
-        }
 
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
-                )
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Text(
-                        text = "Карта недели",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-
-                    OutlinedTextField(
-                        value = weeklyTimelineHeightInput,
-                        onValueChange = {
-                            weeklyTimelineHeightInput = it
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        label = { Text("Высота графика") },
-                        isError = formatError || validationError != null,
-                        supportingText = if (formatError || validationError != null) {
-                            {
-                                when {
-                                    formatError -> Text("Неверный формат: введите число")
-                                    else -> Text(validationError!!)
-                                }
-                            }
-                        } else null
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        OutlinedButton(
+                        Button(
                             onClick = {
                                 keyboardController?.hide()
-                                weeklyTimelineHeightInput = "220"
-                                formatError = false
-                                validationError = null
+                                viewModel.onUpdateRemoteServerUrl(remoteServerUrl)
                             },
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.error
-                            ),
-                            border = BorderStroke(
-                                width = 1.dp,
-                                color = MaterialTheme.colorScheme.error
-                            ),
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(
-                                text = "Сбросить",
-                                color = MaterialTheme.colorScheme.error
-                            )
+                            Text("Сохранить адрес сервера")
                         }
 
                         Button(
                             onClick = {
                                 keyboardController?.hide()
-                                val newValue = weeklyTimelineHeightInput.toIntOrNull()
-                                if (newValue == null) {
-                                    formatError = true
-                                    return@Button
-                                }
-
-                                if (newValue !in 100..1000) {
-                                    validationError = "Значение должно быть от 100 до 1000"
-                                    return@Button
-                                }
-
-                                formatError = false
-                                validationError = null
-                                viewModel.onUpdateWeeklyTimelineHeight(newValue)
+                                viewModel.onTestRemoteServerConnection(remoteServerUrl)
                             },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !state.isCheckingConnection
+                        ) {
+                            Text(if (state.isCheckingConnection) "Проверка..." else "Проверить сервер")
+                        }
+                    }
+                }
+            }
+
+            state.lastConnectionCheck?.let { result ->
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (result.isSuccess) {
+                                MaterialTheme.colorScheme.primaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.errorContainer
+                            }
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(20.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Text(
-                                text = "Сохранить"
+                                text = result.title,
+                                style = MaterialTheme.typography.titleSmall,
+                                color = if (result.isSuccess) {
+                                    MaterialTheme.colorScheme.onPrimaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.onErrorContainer
+                                }
                             )
+                            Text(
+                                text = result.message,
+                                color = if (result.isSuccess) {
+                                    MaterialTheme.colorScheme.onPrimaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.onErrorContainer
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Text(
+                            text = "Карта недели",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+
+                        OutlinedTextField(
+                            value = weeklyTimelineHeightInput,
+                            onValueChange = {
+                                weeklyTimelineHeightInput = it
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            label = { Text("Высота графика") },
+                            isError = formatError || validationError != null,
+                            supportingText = if (formatError || validationError != null) {
+                                {
+                                    when {
+                                        formatError -> Text("Неверный формат: введите число")
+                                        else -> Text(validationError!!)
+                                    }
+                                }
+                            } else null
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = {
+                                    keyboardController?.hide()
+                                    weeklyTimelineHeightInput = "220"
+                                    formatError = false
+                                    validationError = null
+                                },
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.error
+                                ),
+                                border = BorderStroke(
+                                    width = 1.dp,
+                                    color = MaterialTheme.colorScheme.error
+                                ),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    text = "Сбросить",
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
+
+                            Button(
+                                onClick = {
+                                    keyboardController?.hide()
+                                    val newValue = weeklyTimelineHeightInput.toIntOrNull()
+                                    if (newValue == null) {
+                                        formatError = true
+                                        return@Button
+                                    }
+
+                                    if (newValue !in 100..1000) {
+                                        validationError = "Значение должно быть от 100 до 1000"
+                                        return@Button
+                                    }
+
+                                    formatError = false
+                                    validationError = null
+                                    viewModel.onUpdateWeeklyTimelineHeight(newValue)
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    text = "Сохранить"
+                                )
+                            }
                         }
                     }
                 }
