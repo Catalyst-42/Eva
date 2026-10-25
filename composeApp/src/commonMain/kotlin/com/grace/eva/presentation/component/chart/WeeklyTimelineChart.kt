@@ -26,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -34,8 +35,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
-import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
@@ -259,7 +258,7 @@ fun ActivitiesMapChart(
 }
 
 @Composable
-private fun RepeatableIconButton(
+fun RepeatableIconButton(
     onStep: () -> Unit,
     enabled: Boolean,
     icon: ImageVector,
@@ -271,6 +270,7 @@ private fun RepeatableIconButton(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressedState = interactionSource.collectIsPressedAsState()
+    val currentOnStep by rememberUpdatedState(onStep)
     var repeatedDuringCurrentPress by remember { mutableStateOf(false) }
 
     LaunchedEffect(enabled, isPressedState.value) {
@@ -282,7 +282,7 @@ private fun RepeatableIconButton(
         delay(initialDelayMillis.milliseconds)
         while (enabled && isPressedState.value) {
             repeatedDuringCurrentPress = true
-            onStep()
+            currentOnStep()
             delay(repeatIntervalMillis.milliseconds)
         }
     }
@@ -502,30 +502,25 @@ private fun WeekDayBar(
                         val duration = segment.duration.toDuration(DurationUnit.SECONDS)
                         val text = formatDuration(duration)
 
-                        drawIntoCanvas { canvas ->
-                            val textLayoutResult = textMeasurer.measure(
-                                text = text,
-                                style = TextStyle(
-                                    fontSize = 10.sp,
-                                    textAlign = TextAlign.Center,
-                                    color = Color.Black
-                                )
+                        val textLayoutResult = textMeasurer.measure(
+                            text = text,
+                            style = TextStyle(
+                                fontSize = 10.sp,
+                                textAlign = TextAlign.Center,
+                                color = Color.Black
                             )
+                        )
 
-                            val centerX = size.width / 2
-                            val centerY = endY + (height / 2) - (textLayoutResult.size.height / 2)
-
-                            canvas.nativeCanvas.apply {
-                                drawText(
-                                    textLayoutResult = textLayoutResult,
-                                    topLeft = Offset(
-                                        centerX - textLayoutResult.size.width / 2,
-                                        centerY
-                                    ),
-                                    color = Color.Black
-                                )
-                            }
-                        }
+                        val centerX = size.width / 2
+                        val centerY = endY + (height / 2) - (textLayoutResult.size.height / 2)
+                        drawText(
+                            textLayoutResult = textLayoutResult,
+                            topLeft = Offset(
+                                centerX - textLayoutResult.size.width / 2,
+                                centerY
+                            ),
+                            color = Color.Black
+                        )
                     }
                 }
             }

@@ -58,7 +58,7 @@ class TrackerRepositoryImpl(
         val vibrator = ContextCompat.getSystemService(context, Vibrator::class.java)
         vibrator?.let {
             if (it.hasVibrator()) {
-                val effect = VibrationEffect.createOneShot(35, VibrationEffect.DEFAULT_AMPLITUDE)
+                val effect = VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE)
                 vibrator.vibrate(effect)
             }
         }
@@ -363,6 +363,11 @@ class TrackerRepositoryImpl(
 
     override suspend fun updateWeeklyTimelineHeight(height: Int) {
         _tracker.update { it.copy(weeklyTimelineHeight = height) }
+        saveTrackerConfig()
+    }
+
+    override suspend fun updateSaveDensityHeight(height: Int) {
+        _tracker.update { it.copy(saveDensityHeight = height) }
         saveTrackerConfig()
     }
 

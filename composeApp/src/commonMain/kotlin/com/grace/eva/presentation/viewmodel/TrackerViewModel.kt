@@ -11,6 +11,9 @@ import com.grace.eva.domain.model.ActivityTemplate
 import com.grace.eva.domain.model.ConnectionCheckResult
 import com.grace.eva.domain.model.Save
 import com.grace.eva.domain.model.Tracker
+import com.grace.eva.presentation.statistics.StatisticsSnapshotCache
+import com.grace.eva.presentation.statistics.StatisticsSnapshot
+import com.grace.eva.presentation.statistics.createStatisticsSnapshot
 import com.grace.eva.ui.theme.tracker.TemplateColors
 import com.grace.eva.util.formatTime
 import com.grace.eva.util.parseColor
@@ -19,7 +22,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.datetime.TimeZone
 import kotlin.reflect.KClass
 import kotlin.time.Clock
 import kotlin.time.Instant
@@ -48,6 +55,11 @@ class TrackerViewModel(
 
     private val _currentActivity = MutableStateFlow<Activity?>(null)
     val currentActivity: StateFlow<Activity?> = _currentActivity.asStateFlow()
+
+    private val _statisticsSnapshot = MutableStateFlow<StatisticsSnapshot?>(null)
+    val statisticsSnapshot: StateFlow<StatisticsSnapshot?> = _statisticsSnapshot.asStateFlow()
+    private var statisticsSnapshotJob: Job? = null
+    private var statisticsSnapshotJobSaveId: String? = null
 
     init {
         viewModelScope.launch {
@@ -189,6 +201,63 @@ class TrackerViewModel(
     fun onUpdateWeeklyTimelineHeight(height: Int) {
         viewModelScope.launch {
             appContainer.trackerRepository.updateWeeklyTimelineHeight(height)
+        }
+    }
+
+    fun onUpdateSaveDensityHeight(height: Int) {
+        viewModelScope.launch {
+            appContainer.trackerRepository.updateSaveDensityHeight(height)
+        }
+    }
+
+    fun ensureStatisticsSnapshot() {
+        val state = _uiState.value
+        val save = state.currentSave ?: return
+        if (_statisticsSnapshot.value?.saveId == save.id) return
+        StatisticsSnapshotCache.get(save.id)?.let { cached ->
+            _statisticsSnapshot.value = cached
+            return
+        }
+        if (statisticsSnapshotJob?.isActive == true && statisticsSnapshotJobSaveId == save.id) return
+        calculateStatisticsSnapshot(save, state.activityTemplates)
+    }
+
+    fun refreshStatisticsSnapshot() {
+        val state = _uiState.value
+        val save = state.currentSave ?: return
+        calculateStatisticsSnapshot(save, state.activityTemplates)
+    }
+
+    private fun calculateStatisticsSnapshot(save: Save, templates: List<ActivityTemplate>) {
+        statisticsSnapshotJob?.cancel()
+        statisticsSnapshotJobSaveId = save.id
+        val saveSnapshot = save.copy(
+            activities = save.activities.map { it.copy() }.toMutableList()
+        )
+        val templateSnapshot = templates.toList()
+        val updatedAt = save.end ?: Clock.System.now()
+        val timeZone = TimeZone.currentSystemDefault()
+
+        statisticsSnapshotJob = viewModelScope.launch {
+            try {
+                val snapshot = withContext(Dispatchers.Default) {
+                    createStatisticsSnapshot(
+                        save = saveSnapshot,
+                        activityTemplates = templateSnapshot,
+                        updatedAt = updatedAt,
+                        timeZone = timeZone
+                    )
+                }
+                if (_uiState.value.currentSave?.id == saveSnapshot.id) {
+                    _statisticsSnapshot.value = snapshot
+                    StatisticsSnapshotCache.put(snapshot)
+                }
+            } finally {
+                if (statisticsSnapshotJobSaveId == saveSnapshot.id) {
+                    statisticsSnapshotJobSaveId = null
+                    statisticsSnapshotJob = null
+                }
+            }
         }
     }
 

@@ -422,6 +422,11 @@ class TrackerRepositoryImpl : TrackerRepository {
         saveTrackerConfig()
     }
 
+    override suspend fun updateSaveDensityHeight(height: Int) {
+        _tracker.update { it.copy(saveDensityHeight = height) }
+        saveTrackerConfig()
+    }
+
     override suspend fun testRemoteServerConnection(): ConnectionCheckResult {
         return testConnection(
             title = "Сервер",

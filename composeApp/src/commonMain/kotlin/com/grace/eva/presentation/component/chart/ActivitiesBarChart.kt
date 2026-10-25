@@ -2,9 +2,19 @@ package com.grace.eva.presentation.component.chart
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -75,10 +85,53 @@ fun ActivitiesBarChart(
                 val barWidth = size.width
                 var startX = 0f
 
+                // Calculate maximum percentage for grid lines
+                val maxPercentage = data.maxOfOrNull {
+                    (it.duration.inWholeSeconds.toFloat() / totalDuration.inWholeSeconds.toFloat()) * 100f
+                } ?: 0f
+
+                // Draw grid lines (only if there's data above them)
+                val gridLines = listOf(0f, 25f, 50f, 75f, 100f)
+                val gridColor = Color.LightGray.copy(alpha = 0.5f)
+
+                gridLines.forEach { percentage ->
+                    // Only draw grid line if there's data above this percentage
+                    val shouldDrawGrid = percentage <= maxPercentage
+                    if (shouldDrawGrid) {
+                        val y = size.height * (1 - (percentage / 100f))
+
+                        drawLine(
+                            color = gridColor,
+                            start = Offset(0f, y),
+                            end = Offset(size.width, y),
+                            strokeWidth = 0.5f
+                        )
+
+                        // Draw percentage label
+                        if (percentage > 0f && percentage < 100f) {
+                            val text = "${percentage.toInt()}%"
+                            val textLayoutResult = textMeasurer.measure(
+                                text = text,
+                                style = TextStyle(
+                                    color = Color.Gray,
+                                    fontSize = 10.sp
+                                )
+                            )
+
+                            drawText(
+                                textLayoutResult = textLayoutResult,
+                                topLeft = Offset(4f, y - textLayoutResult.size.height / 2)
+                            )
+                        }
+                    }
+                }
+
                 data.forEach { segment ->
-                    val weight = segment.duration.inWholeSeconds.toFloat() / totalDuration.inWholeSeconds.toFloat()
+                    val weight =
+                        segment.duration.inWholeSeconds.toFloat() / totalDuration.inWholeSeconds.toFloat()
                     val segmentWidth = barWidth * weight
-                    val percentage = (segment.duration.inWholeSeconds.toFloat() / totalDuration.inWholeSeconds.toFloat()) * 100
+                    val percentage =
+                        (segment.duration.inWholeSeconds.toFloat() / totalDuration.inWholeSeconds.toFloat()) * 100
 
                     drawRect(
                         color = segment.color,

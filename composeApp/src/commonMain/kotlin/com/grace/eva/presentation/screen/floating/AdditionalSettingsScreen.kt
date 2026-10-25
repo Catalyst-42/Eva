@@ -52,8 +52,11 @@ fun AdditionalSettingsScreen(
     val state by viewModel.uiState.collectAsState()
     var remoteServerUrl by rememberSaveable { mutableStateOf(state.tracker.remoteServerUrl) }
     var weeklyTimelineHeightInput by rememberSaveable { mutableStateOf(state.tracker.weeklyTimelineHeight.toString()) }
+    var saveDensityHeightInput by rememberSaveable { mutableStateOf(state.tracker.saveDensityHeight.toString()) }
     var formatError by remember { mutableStateOf(false) }
     var validationError by remember { mutableStateOf<String?>(null) }
+    var densityHeightFormatError by remember { mutableStateOf(false) }
+    var densityHeightValidationError by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(state.tracker.remoteServerUrl) {
         remoteServerUrl = state.tracker.remoteServerUrl
@@ -61,6 +64,10 @@ fun AdditionalSettingsScreen(
 
     LaunchedEffect(state.tracker.weeklyTimelineHeight) {
         weeklyTimelineHeightInput = state.tracker.weeklyTimelineHeight.toString()
+    }
+
+    LaunchedEffect(state.tracker.saveDensityHeight) {
+        saveDensityHeightInput = state.tracker.saveDensityHeight.toString()
     }
 
     Column(
@@ -272,6 +279,89 @@ fun AdditionalSettingsScreen(
                                 Text(
                                     text = "Сохранить"
                                 )
+                            }
+                        }
+                    }
+                }
+            }
+
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Text(
+                            text = "Карта сохранения",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+
+                        OutlinedTextField(
+                            value = saveDensityHeightInput,
+                            onValueChange = { saveDensityHeightInput = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            label = { Text("Высота графика") },
+                            isError = densityHeightFormatError || densityHeightValidationError != null,
+                            supportingText = if (densityHeightFormatError || densityHeightValidationError != null) {
+                                {
+                                    when {
+                                        densityHeightFormatError -> Text("Неверный формат: введите число")
+                                        else -> Text(densityHeightValidationError!!)
+                                    }
+                                }
+                            } else null
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = {
+                                    keyboardController?.hide()
+                                    saveDensityHeightInput = "120"
+                                    densityHeightFormatError = false
+                                    densityHeightValidationError = null
+                                },
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.error
+                                ),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Сбросить", color = MaterialTheme.colorScheme.error)
+                            }
+
+                            Button(
+                                onClick = {
+                                    keyboardController?.hide()
+                                    val newValue = saveDensityHeightInput.toIntOrNull()
+                                    if (newValue == null) {
+                                        densityHeightFormatError = true
+                                        densityHeightValidationError = null
+                                        return@Button
+                                    }
+                                    if (newValue !in 100..1000) {
+                                        densityHeightFormatError = false
+                                        densityHeightValidationError =
+                                            "Значение должно быть от 100 до 1000"
+                                        return@Button
+                                    }
+
+                                    densityHeightFormatError = false
+                                    densityHeightValidationError = null
+                                    viewModel.onUpdateSaveDensityHeight(newValue)
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Сохранить")
                             }
                         }
                     }

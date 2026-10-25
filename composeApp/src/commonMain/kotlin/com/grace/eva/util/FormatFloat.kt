@@ -1,6 +1,8 @@
 package com.grace.eva.util
 
+import kotlin.math.abs
 import kotlin.math.pow
+import kotlin.math.roundToLong
 
 /**
  * Formats float with given decimal places.
@@ -9,13 +11,17 @@ import kotlin.math.pow
  * @param decimals Number of decimal places
  */
 fun formatFloat(value: Float, decimals: Int): String {
-    val integerPart = value.toInt()
-    val fractionalPart = ((value - integerPart) * 10.0.pow(decimals)).toInt()
+    val scale = 10.0.pow(decimals).toLong()
+    val roundedValue = (value.toDouble() * scale).roundToLong()
+    val absoluteValue = abs(roundedValue)
+    val integerPart = absoluteValue / scale
+    val fractionalPart = absoluteValue % scale
     val fractionalStr = fractionalPart.toString().padStart(decimals, '0')
+    val sign = if (roundedValue < 0) "-" else ""
 
     return if (decimals > 0) {
-        "$integerPart.$fractionalStr"
+        "$sign$integerPart.$fractionalStr"
     } else {
-        integerPart.toString()
+        "$sign$integerPart"
     }
 }

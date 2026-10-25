@@ -34,6 +34,7 @@ interface TrackerRepository {
 
     suspend fun updateRemoteServerUrl(url: String)
     suspend fun updateWeeklyTimelineHeight(height: Int)
+    suspend fun updateSaveDensityHeight(height: Int)
     suspend fun testRemoteServerConnection(): ConnectionCheckResult
     suspend fun syncSaveWithServer(save: Save)
 }

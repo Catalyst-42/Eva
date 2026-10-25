@@ -8,6 +8,7 @@ data class Tracker(
     val currentSaveId: String? = null,
     val remoteServerUrl: String = DEFAULT_REMOTE_SERVER_URL,
     val weeklyTimelineHeight: Int = 220,
+    val saveDensityHeight: Int = 120,
 )
 
 const val DEFAULT_REMOTE_SERVER_URL = "http://10.0.2.2:8000"
